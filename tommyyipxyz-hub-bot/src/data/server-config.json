@@ -1,0 +1,97 @@
+{
+  "serverName": "TommyYipXYZ's Hub",
+  "roles": [
+    { "name": "Admin", "color": "#e74c3c", "permissions": ["Administrator"], "hoist": true, "mentionable": false },
+    { "name": "Mod", "color": "#e67e22", "permissions": ["ManageMessages", "KickMembers", "BanMembers", "MuteMembers", "ManageNicknames", "ManageThreads"], "hoist": true, "mentionable": true },
+    { "name": "OG", "color": "#f1c40f", "permissions": [], "hoist": true, "mentionable": true },
+    { "name": "Builder", "color": "#2ecc71", "permissions": [], "hoist": true, "mentionable": true },
+    { "name": "Vibecoder", "color": "#9b59b6", "permissions": [], "hoist": false, "mentionable": true },
+    { "name": "Freelancer", "color": "#1abc9c", "permissions": [], "hoist": false, "mentionable": true },
+    { "name": "Creator", "color": "#e91e63", "permissions": [], "hoist": false, "mentionable": true },
+    { "name": "Stream Regular", "color": "#3498db", "permissions": [], "hoist": false, "mentionable": true },
+    { "name": "Member", "color": "#95a5a6", "permissions": [], "hoist": false, "mentionable": false }
+  ],
+  "categories": [
+    {
+      "name": "START HERE",
+      "channels": [
+        { "name": "rules", "type": "text", "topic": "Read before you do anything else.", "readonly": true },
+        { "name": "how-it-works", "type": "text", "topic": "What this community is about and how to get started.", "readonly": true },
+        { "name": "pick-your-path", "type": "text", "topic": "React to grab your roles — Vibecoder, Freelancer, Creator.", "readonly": true }
+      ]
+    },
+    {
+      "name": "THE LOBBY",
+      "channels": [
+        { "name": "chat", "type": "text", "topic": "Talk about whatever. Keep it chill." },
+        { "name": "introductions", "type": "text", "topic": "New here? Tell us who you are and what you're building." },
+        { "name": "daily-wins", "type": "text", "topic": "Share your wins — big or small. First dollar? First deploy? Post it." }
+      ]
+    },
+    {
+      "name": "THE LAB",
+      "channels": [
+        { "name": "build-log", "type": "text", "topic": "Document your builds. Work in progress, updates, progress pics." },
+        { "name": "show-your-work", "type": "text", "topic": "Finished something? Show it off here." },
+        { "name": "need-a-hand", "type": "text", "topic": "Stuck on something? Ask for help. No dumb questions." },
+        { "name": "tools-and-stacks", "type": "text", "topic": "Share useful tools, APIs, frameworks, and tech stacks." }
+      ]
+    },
+    {
+      "name": "THE BAG",
+      "channels": [
+        { "name": "money-talk", "type": "text", "topic": "Strategies, income reports, what's working right now." },
+        { "name": "freelance-game", "type": "text", "topic": "Clients, pricing, proposals, and freelance life." },
+        { "name": "saas-and-flips", "type": "text", "topic": "Building and selling software, buying and flipping projects." },
+        { "name": "side-quests", "type": "text", "topic": "Everything else — affiliate, content, dropshipping, experiments." }
+      ]
+    },
+    {
+      "name": "LIVE",
+      "channels": [
+        { "name": "stream-chat", "type": "text", "topic": "Live chat during streams." },
+        { "name": "upcoming", "type": "text", "topic": "Stream schedule and upcoming events.", "readonly": true },
+        { "name": "collabs", "type": "text", "topic": "Looking for someone to team up with? Post here." }
+      ]
+    },
+    {
+      "name": "VOICE",
+      "channels": [
+        { "name": "Deep Work", "type": "voice" },
+        { "name": "The Lounge", "type": "voice" },
+        { "name": "Screen Share", "type": "voice" }
+      ]
+    },
+    {
+      "name": "BOT STUFF",
+      "channels": [
+        { "name": "commands", "type": "text", "topic": "Use bot commands here." },
+        { "name": "suggestions", "type": "text", "topic": "Got ideas for the bot or the server? Drop them here." }
+      ]
+    }
+  ],
+  "welcomeMessage": {
+    "title": "Welcome to TommyYipXYZ's Hub! 🚀",
+    "description": "You just joined a community of builders, vibecoders, and people making money online.\n\n**Here's how to get started:**\n\n⬥ Read the rules in <#rules>\n⬥ Pick your path in <#pick-your-path>\n⬥ Introduce yourself in <#introductions>\n⬥ Start chatting in <#chat>\n\nLet's build something.",
+    "color": "#9b59b6"
+  },
+  "rules": [
+    "**1. Be respectful.** No racism, sexism, homophobia, or personal attacks. Period.",
+    "**2. No spam.** Don't flood channels with repeated messages, links, or self-promo without context.",
+    "**3. Keep it legal.** No piracy, scams, phishing, or anything that could get someone in trouble.",
+    "**4. Right channel, right topic.** Use channels for what they're made for.",
+    "**5. No unsolicited DMs.** Don't DM members to sell stuff unless they ask.",
+    "**6. Share real value.** If you're posting a link or tool, explain why it's useful.",
+    "**7. Ask questions freely.** There are no dumb questions here. We all started somewhere.",
+    "**8. Respect the mods.** If a mod asks you to stop, stop. Appeals go to Admin.",
+    "**9. Have fun and build.** This is a community of doers. Ship stuff, share wins, help others."
+  ],
+  "roleReactions": {
+    "message": "**Pick your path** — React to grab your roles:\n\n💜 → Vibecoder\n💼 → Freelancer\n🎥 → Creator",
+    "reactions": {
+      "💜": "Vibecoder",
+      "💼": "Freelancer",
+      "🎥": "Creator"
+    }
+  }
+}
