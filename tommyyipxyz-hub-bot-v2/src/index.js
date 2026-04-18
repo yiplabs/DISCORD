@@ -41,13 +41,18 @@ for (const file of commandFiles) {
   commands.push(command.data.toJSON());
 }
 
-// ─── REGISTER SLASH COMMANDS ───
+// ─── REGISTER SLASH COMMANDS (per-guild for instant updates) ───
 async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
     console.log('[Bot] Registering slash commands...');
-    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-    console.log(`[Bot] ${commands.length} slash commands registered.`);
+    for (const guild of client.guilds.cache.values()) {
+      await rest.put(
+        Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id),
+        { body: commands }
+      );
+      console.log(`[Bot] ${commands.length} slash commands registered for guild: ${guild.name}`);
+    }
   } catch (err) {
     console.error('[Bot] Failed to register commands:', err);
   }
