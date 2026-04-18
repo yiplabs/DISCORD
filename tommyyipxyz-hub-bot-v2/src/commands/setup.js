@@ -205,7 +205,7 @@ module.exports = {
         }
 
         // Save settings
-        const youtubeChannel = createdChannels['youtube-feed'] || createdChannels['┃youtube-feed'];
+        const youtubeChannel = createdChannels['announcements'] || createdChannels['┃announcements'];
         const chatChannel = createdChannels['chat'] || createdChannels['┃chat'];
 
         stmts.upsertSettings.run({
