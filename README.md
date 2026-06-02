@@ -81,8 +81,16 @@ npm start
 |----------|----------|-------------|
 | `DISCORD_TOKEN` | ✅ | Bot token from Discord Developer Portal |
 | `CLIENT_ID` | ✅ | OAuth2 Client ID from Discord Developer Portal |
-| `YOUTUBE_CHANNEL_ID` | Optional | Your YouTube channel ID (enables video notifications) |
+| `YOUTUBE_CHANNEL_ID` | Optional | First YouTube channel ID (enables video notifications) |
+| `YOUTUBE_HANDLE` | Optional | @handle for channel #1 used in links/mentions (default `TOMMYYIPXYZ`) |
+| `YOUTUBE_CHANNEL_ID_2` | Optional | Second YouTube channel ID (defaults to **HUNTER YIPLABS**) |
+| `YOUTUBE_HANDLE_2` | Optional | @handle for channel #2 (default `HUNTERYIPLABS`) |
 | `YOUTUBE_API_KEY` | No | Not needed — uses free RSS feed |
+
+> **Multiple channels:** The bot watches both channels above and posts every new
+> upload / live stream into the **same** Discord notification channel (set with
+> `/setnotify`). Each channel is tracked independently, so notifications never
+> overwrite each other. HUNTER YIPLABS is watched by default — no extra setup needed.
 
 ---
 

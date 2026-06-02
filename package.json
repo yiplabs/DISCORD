@@ -2,10 +2,10 @@
   "name": "tommyyipxyz-hub-bot",
   "version": "1.0.0",
   "description": "Discord bot for TommyYipXYZ's Hub — server setup, welcome, XP, YouTube notifications",
-  "main": "src/index.js",
+  "main": "tommyyipxyz-hub-bot-v2/src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "setup": "node src/index.js"
+    "start": "node tommyyipxyz-hub-bot-v2/src/index.js",
+    "setup": "node tommyyipxyz-hub-bot-v2/src/index.js"
   },
   "dependencies": {
     "discord.js": "^14.16.3",

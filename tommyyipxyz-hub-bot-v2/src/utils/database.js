@@ -28,6 +28,16 @@ db.exec(`
     last_youtube_video_id TEXT,
     xp_announce_channel_id TEXT
   );
+
+  -- Per-YouTube-channel notification state (supports watching multiple channels).
+  -- One row per (guild, YouTube channel) so each channel is tracked independently.
+  CREATE TABLE IF NOT EXISTS youtube_state (
+    guild_id TEXT NOT NULL,
+    yt_channel_id TEXT NOT NULL,
+    last_video_id TEXT,
+    last_live_id TEXT,
+    PRIMARY KEY (guild_id, yt_channel_id)
+  );
 `);
 
 // Prepared statements for performance
@@ -57,8 +67,16 @@ const stmts = {
       xp_announce_channel_id = excluded.xp_announce_channel_id
   `),
   getUserRank: db.prepare(`
-    SELECT COUNT(*) + 1 as rank FROM users 
+    SELECT COUNT(*) + 1 as rank FROM users
     WHERE guild_id = ? AND xp > (SELECT xp FROM users WHERE user_id = ? AND guild_id = ?)
+  `),
+  getYoutubeState: db.prepare('SELECT * FROM youtube_state WHERE guild_id = ? AND yt_channel_id = ?'),
+  upsertYoutubeState: db.prepare(`
+    INSERT INTO youtube_state (guild_id, yt_channel_id, last_video_id, last_live_id)
+    VALUES (@guild_id, @yt_channel_id, @last_video_id, @last_live_id)
+    ON CONFLICT(guild_id, yt_channel_id) DO UPDATE SET
+      last_video_id = excluded.last_video_id,
+      last_live_id = excluded.last_live_id
   `),
 };
 
