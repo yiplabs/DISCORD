@@ -14,7 +14,7 @@ const path = require('path');
 const cron = require('node-cron');
 const { stmts } = require('./utils/database');
 const { addMessageXP } = require('./utils/xp');
-const { checkAndNotify } = require('./utils/youtube');
+const { checkAndNotify, getWatchedChannels } = require('./utils/youtube');
 const serverConfig = require('./data/server-config.json');
 
 // ─── CLIENT SETUP ───
@@ -69,7 +69,8 @@ client.once('ready', async () => {
   await registerCommands();
 
   // YouTube check every 3 minutes
-  if (process.env.YOUTUBE_CHANNEL_ID) {
+  const watchedChannels = getWatchedChannels();
+  if (watchedChannels.length > 0) {
     // Run once on startup
     setTimeout(async () => {
       for (const guild of client.guilds.cache.values()) {
@@ -84,9 +85,11 @@ client.once('ready', async () => {
       }
     });
     console.log('┃ YouTube checker started (every 3 min)');
-    console.log(`┃ Watching channel: ${process.env.YOUTUBE_CHANNEL_ID}`);
+    for (const c of watchedChannels) {
+      console.log(`┃ Watching @${c.handle} (${c.channelId})`);
+    }
   } else {
-    console.log('┃ ⚠ No YOUTUBE_CHANNEL_ID set — YouTube notifications disabled');
+    console.log('┃ ⚠ No YouTube channels configured — YouTube notifications disabled');
   }
 
   console.log('┃ Ready!\n');
