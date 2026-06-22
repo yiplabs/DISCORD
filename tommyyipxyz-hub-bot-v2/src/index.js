@@ -96,7 +96,7 @@ client.once('ready', async () => {
     });
     console.log('┃ YouTube checker started (every 3 min)');
     for (const c of watchedChannels) {
-      console.log(`┃ Watching @${c.handle} (${c.channelId})`);
+      console.log(`┃ Watching @${c.handle} (${c.channelId || 'id resolved at runtime'})`);
     }
   } else {
     console.log('┃ ⚠ No YouTube channels configured — YouTube notifications disabled');

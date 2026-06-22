@@ -119,7 +119,27 @@ module.exports = {
             reason: 'Dollar Vibe Club setup',
           };
 
-          if (ch.readonly) {
+          if (ch.staff) {
+            // Hidden from everyone; visible to Admin, Mod, and the bot only.
+            const adminRole = createdRoles['⚙ Admin'];
+            const modRole = createdRoles['🛡 Mod'];
+            options.permissionOverwrites = [
+              { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+              { id: interaction.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+            ];
+            if (adminRole) {
+              options.permissionOverwrites.push({
+                id: adminRole.id,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+              });
+            }
+            if (modRole) {
+              options.permissionOverwrites.push({
+                id: modRole.id,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+              });
+            }
+          } else if (ch.readonly) {
             options.permissionOverwrites = [
               {
                 id: guild.roles.everyone.id,

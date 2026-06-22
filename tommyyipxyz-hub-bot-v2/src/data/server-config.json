@@ -78,6 +78,13 @@
         { "name": "┃commands", "type": "text", "topic": "↳ Use bot commands here." },
         { "name": "┃suggestions", "type": "text", "topic": "↳ Got ideas for the bot or the server? Drop them here." }
       ]
+    },
+    {
+      "name": "┃ STAFF",
+      "channels": [
+        { "name": "┃staff-chat", "type": "text", "topic": "↳ Private channel for admins and mods.", "staff": true },
+        { "name": "┃mod-log", "type": "text", "topic": "↳ Moderation and audit logs. Point the mod bot here.", "staff": true }
+      ]
     }
   ],
   "welcomeMessage": {

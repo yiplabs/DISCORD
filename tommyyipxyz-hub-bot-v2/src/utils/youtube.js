@@ -6,43 +6,73 @@ const YOUTUBE_RSS_URL = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 const USER_AGENT = 'DollarVibeClub-Bot/1.0';
 
 /**
- * Build the list of YouTube channels to watch.
+ * The founders' channels to watch. Both are listed by handle. Hunter Yiplabs has a
+ * known channel id baked in; Tommy's id is resolved from the handle at runtime (or
+ * can be pinned with YOUTUBE_CHANNEL_ID). Notifications for both go to the same
+ * Discord channel (set with /setnotify), tracked independently.
  *
- * Channel 1 (primary) comes from the env vars that the bot already used:
- *   YOUTUBE_CHANNEL_ID / YOUTUBE_HANDLE
- *
- * Channel 2 is HUNTER YIPLABS. It defaults to the known channel ID/handle so
- * it works out of the box, but can still be overridden via env vars:
- *   YOUTUBE_CHANNEL_ID_2 / YOUTUBE_HANDLE_2
- *
- * Returns an array of { channelId, handle }.
+ * Returns an array of { handle, channelId|null }. A null id is resolved later.
  */
 function getWatchedChannels() {
-  const channels = [];
-
-  if (process.env.YOUTUBE_CHANNEL_ID) {
-    channels.push({
-      channelId: process.env.YOUTUBE_CHANNEL_ID,
+  const channels = [
+    {
       handle: process.env.YOUTUBE_HANDLE || 'TOMMYYIPXYZ',
-    });
-  }
-
-  // HUNTER YIPLABS — https://www.youtube.com/@HUNTERYIPLABS
-  const secondId = process.env.YOUTUBE_CHANNEL_ID_2 || 'UC_oMk6B6Hv7PwoyskeWWS2g';
-  if (secondId) {
-    channels.push({
-      channelId: secondId,
+      channelId: process.env.YOUTUBE_CHANNEL_ID || null,
+    },
+    {
       handle: process.env.YOUTUBE_HANDLE_2 || 'HUNTERYIPLABS',
-    });
-  }
+      channelId: process.env.YOUTUBE_CHANNEL_ID_2 || 'UC_oMk6B6Hv7PwoyskeWWS2g',
+    },
+  ];
 
-  // De-dupe in case the same channel ID is configured twice.
+  // De-dupe by handle.
   const seen = new Set();
   return channels.filter((c) => {
-    if (!c.channelId || seen.has(c.channelId)) return false;
-    seen.add(c.channelId);
+    const key = c.handle.toLowerCase();
+    if (!c.handle || seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
+}
+
+// Cache resolved handle -> channel id so we only look each up once per process.
+const resolvedChannelIds = new Map();
+
+/**
+ * Resolve a @handle to its permanent UC... channel id by reading the channel page.
+ * Cached in memory. Returns null if it cannot be resolved (the RSS feed needs the id).
+ */
+async function resolveChannelId(handle) {
+  if (resolvedChannelIds.has(handle)) return resolvedChannelIds.get(handle);
+  try {
+    const res = await fetch(`https://www.youtube.com/@${handle}?hl=en&gl=US`, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Accept-Language': 'en-US,en;q=0.9',
+        Cookie: 'CONSENT=YES+1',
+      },
+    });
+    if (!res.ok) {
+      console.error(`[YouTube] Could not resolve @${handle} (HTTP ${res.status})`);
+      return null;
+    }
+    const html = await res.text();
+    const m =
+      html.match(/"externalId":"(UC[\w-]{20,})"/) ||
+      html.match(/"channelId":"(UC[\w-]{20,})"/) ||
+      html.match(/channel\/(UC[\w-]{20,})/);
+    const id = m ? m[1] : null;
+    if (id) {
+      resolvedChannelIds.set(handle, id);
+      console.log(`[YouTube] Resolved @${handle} -> ${id}`);
+    } else {
+      console.error(`[YouTube] Resolved @${handle} but found no channel id in the page`);
+    }
+    return id;
+  } catch (err) {
+    console.error(`[YouTube] Resolve failed for @${handle}:`, err.message);
+    return null;
+  }
 }
 
 /**
@@ -262,8 +292,13 @@ async function checkAndNotify(client, guildId) {
   const liveRoleId = liveRole?.id || null;
 
   for (const ytChannel of channels) {
-    await checkChannel(client, guildId, discordChannel, ytChannel, liveRoleId);
+    const channelId = ytChannel.channelId || (await resolveChannelId(ytChannel.handle));
+    if (!channelId) {
+      console.warn(`[YouTube] Skipping @${ytChannel.handle} — no channel id available yet`);
+      continue;
+    }
+    await checkChannel(client, guildId, discordChannel, { channelId, handle: ytChannel.handle }, liveRoleId);
   }
 }
 
-module.exports = { checkNewVideo, checkIfLive, checkAndNotify, getWatchedChannels };
+module.exports = { checkNewVideo, checkIfLive, checkAndNotify, getWatchedChannels, resolveChannelId };
