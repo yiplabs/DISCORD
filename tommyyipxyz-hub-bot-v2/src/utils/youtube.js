@@ -1,5 +1,6 @@
 const { stmts } = require('./database');
 const { COLORS, V2_FLAGS, ContainerBuilder, text, separator, gallery } = require('./components');
+const { ensureLiveRole, optInButtonRow } = require('./liveNotify');
 
 const YOUTUBE_RSS_URL = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 const USER_AGENT = 'TommyYipXYZ-Hub-Bot/1.0';
@@ -133,7 +134,12 @@ async function checkIfLive(channelId) {
  * Check a single YouTube channel for a guild and post notifications.
  * Tracks state per (guild, YouTube channel) so each channel is independent.
  */
-async function checkChannel(channel, guildId, discordChannel, { channelId, handle }) {
+async function checkChannel(client, guildId, discordChannel, { channelId, handle }, liveRoleId) {
+  // Ping only the opt-in role, never the whole server. Attach the opt-in button so
+  // anyone can start following streams straight from the post.
+  const roleMention = liveRoleId ? `<@&${liveRoleId}> ` : '';
+  const allowedMentions = liveRoleId ? { roles: [liveRoleId] } : { parse: [] };
+
   // Load per-channel state (or seed a fresh row).
   let state = stmts.getYoutubeState.get(guildId, channelId);
   const isFirstRun = !state;
@@ -149,7 +155,7 @@ async function checkChannel(channel, guildId, discordChannel, { channelId, handl
 
     if (state.last_video_id !== latest.videoId) {
       // On the very first run for this channel, seed the latest video without
-      // notifying so we don't blast @everyone for content posted before setup.
+      // notifying so we don't ping for content posted before setup.
       if (isFirstRun) {
         state.last_video_id = latest.videoId;
         stmts.upsertYoutubeState.run(state);
@@ -162,7 +168,7 @@ async function checkChannel(channel, guildId, discordChannel, { channelId, handl
 
         const container = new ContainerBuilder()
           .setAccentColor(COLORS.youtube)
-          .addTextDisplayComponents(text('🚨 **NEW VIDEO JUST DROPPED** @everyone'))
+          .addTextDisplayComponents(text(`${roleMention}🚨 **NEW VIDEO JUST DROPPED**`))
           .addSeparatorComponents(separator())
           .addTextDisplayComponents(
             text(
@@ -177,12 +183,13 @@ async function checkChannel(channel, guildId, discordChannel, { channelId, handl
           )
           .addMediaGalleryComponents(gallery(latest.thumbnail))
           .addSeparatorComponents(separator())
-          .addTextDisplayComponents(text(`-# YouTube ┃ New Upload • <t:${publishedUnix}:R>`));
+          .addTextDisplayComponents(text(`-# YouTube ┃ New Upload • <t:${publishedUnix}:R>`))
+          .addActionRowComponents(optInButtonRow());
 
         await discordChannel.send({
           components: [container],
           flags: V2_FLAGS,
-          allowedMentions: { parse: ['everyone'] },
+          allowedMentions,
         });
 
         console.log(`[YouTube] Notified ${handle} — new video: ${latest.title}`);
@@ -200,7 +207,7 @@ async function checkChannel(channel, guildId, discordChannel, { channelId, handl
       if (!isFirstRun) {
         const container = new ContainerBuilder()
           .setAccentColor(COLORS.youtube)
-          .addTextDisplayComponents(text(`🔴 **@${handle} IS LIVE** @everyone`))
+          .addTextDisplayComponents(text(`${roleMention}🔴 **@${handle} IS LIVE**`))
           .addSeparatorComponents(separator())
           .addTextDisplayComponents(
             text(
@@ -217,12 +224,13 @@ async function checkChannel(channel, guildId, discordChannel, { channelId, handl
             gallery(`https://i.ytimg.com/vi/${live.videoId}/maxresdefault_live.jpg`)
           )
           .addSeparatorComponents(separator())
-          .addTextDisplayComponents(text('-# YouTube ┃ Live Stream'));
+          .addTextDisplayComponents(text('-# YouTube ┃ Live Stream'))
+          .addActionRowComponents(optInButtonRow());
 
         await discordChannel.send({
           components: [container],
           flags: V2_FLAGS,
-          allowedMentions: { parse: ['everyone'] },
+          allowedMentions,
         });
 
         console.log(`[YouTube] Notified ${handle} — LIVE: ${live.title}`);
@@ -248,8 +256,13 @@ async function checkAndNotify(client, guildId) {
     .catch(() => null);
   if (!discordChannel) return;
 
+  // Make sure the opt-in role exists so the ping and the button both work.
+  const guild = discordChannel.guild || client.guilds.cache.get(guildId);
+  const liveRole = guild ? await ensureLiveRole(guild) : null;
+  const liveRoleId = liveRole?.id || null;
+
   for (const ytChannel of channels) {
-    await checkChannel(client, guildId, discordChannel, ytChannel);
+    await checkChannel(client, guildId, discordChannel, ytChannel, liveRoleId);
   }
 }
 

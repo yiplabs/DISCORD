@@ -16,6 +16,7 @@ const { addMessageXP } = require('./utils/xp');
 const { checkAndNotify, getWatchedChannels } = require('./utils/youtube');
 const serverConfig = require('./data/server-config.json');
 const { COLORS, V2_FLAGS, ContainerBuilder, text, separator, thumbnailSection } = require('./utils/components');
+const { TOGGLE_ID, handleToggle } = require('./utils/liveNotify');
 
 // ─── CLIENT SETUP ───
 const client = new Client({
@@ -97,6 +98,18 @@ client.once('ready', async () => {
 
 // ─── EVENT: SLASH COMMANDS ───
 client.on('interactionCreate', async (interaction) => {
+  // Opt-in button under stream/video posts and on the standing panel.
+  if (interaction.isButton()) {
+    if (interaction.customId === TOGGLE_ID) {
+      try {
+        await handleToggle(interaction);
+      } catch (err) {
+        console.error('[Bot] Live notify toggle error:', err);
+      }
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
 
   const command = client.commands.get(interaction.commandName);

@@ -26,7 +26,8 @@ db.exec(`
     role_react_message_id TEXT,
     youtube_notify_channel_id TEXT,
     last_youtube_video_id TEXT,
-    xp_announce_channel_id TEXT
+    xp_announce_channel_id TEXT,
+    live_notify_role_id TEXT
   );
 
   -- Per-YouTube-channel notification state (supports watching multiple channels).
@@ -39,6 +40,12 @@ db.exec(`
     PRIMARY KEY (guild_id, yt_channel_id)
   );
 `);
+
+// ─── LIGHTWEIGHT MIGRATIONS (for databases created before a column existed) ───
+const settingsColumns = db.prepare(`PRAGMA table_info(settings)`).all().map((c) => c.name);
+if (!settingsColumns.includes('live_notify_role_id')) {
+  db.exec(`ALTER TABLE settings ADD COLUMN live_notify_role_id TEXT`);
+}
 
 // Prepared statements for performance
 const stmts = {
@@ -69,6 +76,11 @@ const stmts = {
   getUserRank: db.prepare(`
     SELECT COUNT(*) + 1 as rank FROM users
     WHERE guild_id = ? AND xp > (SELECT xp FROM users WHERE user_id = ? AND guild_id = ?)
+  `),
+  setLiveNotifyRole: db.prepare(`
+    INSERT INTO settings (guild_id, live_notify_role_id)
+    VALUES (?, ?)
+    ON CONFLICT(guild_id) DO UPDATE SET live_notify_role_id = excluded.live_notify_role_id
   `),
   getYoutubeState: db.prepare('SELECT * FROM youtube_state WHERE guild_id = ? AND yt_channel_id = ?'),
   upsertYoutubeState: db.prepare(`

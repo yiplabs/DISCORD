@@ -1,5 +1,10 @@
 node_modules/
 .env
+
+# Runtime SQLite database (created by the bot at any path depth)
+*.db
+*.db-wal
+*.db-shm
 src/data/*.db
 src/data/*.db-wal
 src/data/*.db-shm
