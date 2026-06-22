@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
 const { stmts } = require('./utils/database');
-const { addMessageXP } = require('./utils/xp');
+const dvcApi = require('./utils/dvcApi');
 const { checkAndNotify, getWatchedChannels } = require('./utils/youtube');
 const serverConfig = require('./data/server-config.json');
 const {
@@ -237,13 +237,44 @@ client.on('messageReactionRemove', async (reaction, user) => {
 });
 
 // ─── EVENT: XP ON MESSAGE ───
+// XP is awarded by the DVC website through its API. We only POST one event per
+// minute per user (our own anti-spam); the website applies values, caps, the
+// streak multiplier, and the level math, then tells us what actually happened.
+const MESSAGE_XP_COOLDOWN_MS = 60_000;
+const UNLINKED_NUDGE_MS = 24 * 60 * 60 * 1000;
+const lastMessageXp = new Map(); // discordId -> timestamp ms
+const lastUnlinkedNudge = new Map(); // discordId -> timestamp ms
+
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (!message.guild) return;
+  if (!dvcApi.isConfigured()) return;
 
-  const result = addMessageXP(message.author.id, message.guild.id);
+  const userId = message.author.id;
+  const now = Date.now();
+  if (now - (lastMessageXp.get(userId) || 0) < MESSAGE_XP_COOLDOWN_MS) return;
+  lastMessageXp.set(userId, now);
 
-  if (result?.leveledUp) {
+  const res = await dvcApi.awardXp({
+    discordId: userId,
+    source: 'discord_message',
+    dedupeKey: `discord_msg:${message.id}`,
+    metadata: {
+      guild_id: message.guild.id,
+      channel_id: message.channelId,
+      message_id: message.id,
+    },
+  });
+
+  if (res.httpStatus !== 200) {
+    if (res.httpStatus || res.error) {
+      console.warn(`[XP] award failed: HTTP ${res.httpStatus}${res.error ? ` (${res.error})` : ''}`);
+    }
+    return;
+  }
+
+  // awarded | deduped | capped | ineligible | skipped | unlinked. Most are silent.
+  if (res.status === 'awarded' && res.leveled_up) {
     const settings = stmts.getSettings.get(message.guild.id);
     const channelId = settings?.xp_announce_channel_id || message.channelId;
     const channel = await message.guild.channels.fetch(channelId).catch(() => message.channel);
@@ -251,12 +282,34 @@ client.on('messageCreate', async (message) => {
     const container = new ContainerBuilder()
       .setAccentColor(COLORS.success)
       .addTextDisplayComponents(
-        text(`⚡ **${message.author.displayName}** just reached **Level ${result.newLevel}**!`)
+        text(`⚡ **${message.author.displayName}** reached **Level ${res.new_level}** ┃ ${res.level_name}`)
       );
 
     await channel.send({ components: [container], flags: V2_FLAGS }).catch(() => {});
+  } else if (res.status === 'unlinked') {
+    await nudgeUnlinked(message.author);
   }
 });
+
+// Gentle, opt-in reminder to link. Only fires if a link URL is configured, and at
+// most once per day per user. XP keeps being parked either way, so this never blocks.
+async function nudgeUnlinked(user) {
+  const url = dvcApi.linkUrl();
+  if (!url) return;
+
+  const now = Date.now();
+  if (now - (lastUnlinkedNudge.get(user.id) || 0) < UNLINKED_NUDGE_MS) return;
+  lastUnlinkedNudge.set(user.id, now);
+
+  await user
+    .send(
+      [
+        'Heads up: your Discord is not linked to Dollar Vibe Club yet, so your XP is being saved but not counted on the leaderboard.',
+        `Link it here to start climbing: ${url}`,
+      ].join('\n')
+    )
+    .catch(() => {});
+}
 
 // ─── START ───
 client.login(process.env.DISCORD_TOKEN);

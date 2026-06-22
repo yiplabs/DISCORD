@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "setup": "node src/index.js"
+    "setup": "node src/index.js",
+    "backfill": "node src/scripts/backfillXp.js"
   },
   "dependencies": {
     "discord.js": "^14.16.3",

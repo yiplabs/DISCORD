@@ -11,7 +11,7 @@ A custom Discord bot that sets up your entire server in one command and runs you
 | `/setup` | Creates ALL categories, channels, roles, rules, and role reactions in one shot |
 | Welcome system | Auto-welcomes new members with an embed + assigns the Member role |
 | Role reactions | Members react in #pick-your-path to get Vibecoder, Freelancer, or Creator roles |
-| XP & Leveling | Earn 15-25 XP per message (1 min cooldown to prevent spam) |
+| XP & Leveling | Synced with the Dollar Vibe Club website: chatting earns XP into your shared DVC total and leaderboard |
 | `/rank` | Check your level, XP, rank, and progress bar |
 | `/leaderboard` | See the top 10 members by XP |
 | YouTube notifications | Checks your channel every 5 min via RSS (free, no API key needed) |
@@ -83,6 +83,9 @@ npm start
 | `CLIENT_ID` | ✅ | OAuth2 Client ID from Discord Developer Portal |
 | `YOUTUBE_CHANNEL_ID` | Optional | Your YouTube channel ID (enables video notifications) |
 | `YOUTUBE_API_KEY` | No | Not needed — uses free RSS feed |
+| `DVC_API_BASE` | For XP | Base URL of the DVC website that awards XP |
+| `DISCORD_BOT_XP_SECRET` | For XP | Shared secret, must match the value set on the DVC web server |
+| `DVC_LINK_URL` | Optional | "Link Discord" page URL, used by `/rank` and the once a day link reminder |
 
 ---
 
@@ -132,11 +135,13 @@ npm start
 
 ## XP System
 
-- **15-25 XP** per message (random)
-- **60 second cooldown** between XP gains (no spam farming)
-- Level formula: `level = floor(0.1 × √xp)`
-- Level 1 = 100 XP, Level 5 = 2,500 XP, Level 10 = 10,000 XP, Level 20 = 40,000 XP
-- Level-up announcements in #chat
+XP is shared with the Dollar Vibe Club website. Chatting in Discord and posting or joining events on the site both earn XP into one total, shown on one leaderboard in both places. The website owns all the rules (per action values, daily caps, the streak multiplier, and the level math); the bot just reports events and shows results.
+
+- Chatting earns XP into your DVC total. The website sets the value and the daily cap.
+- One message per minute counts (the bot's own anti spam).
+- Link your Discord on the DVC website so your XP counts toward the leaderboard. Until you link, your XP is saved and credited automatically the moment you link.
+- Levels and rank names come from the website, so Discord and the site always agree.
+- `/rank` and `/leaderboard` read from the shared total. Run `npm run backfill` once to migrate any pre existing local XP.
 
 ---
 
