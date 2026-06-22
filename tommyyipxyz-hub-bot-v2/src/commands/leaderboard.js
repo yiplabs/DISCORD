@@ -25,7 +25,7 @@ module.exports = {
       const prefix = medals[i] || `**${i + 1}.**`;
       const member = await interaction.guild.members.fetch(u.user_id).catch(() => null);
       const name = member ? member.displayName : `User ${u.user_id.slice(-4)}`;
-      lines.push(`${prefix} **${name}** — Level ${u.level} • ${u.xp.toLocaleString()} XP`);
+      lines.push(`${prefix} **${name}** • Level ${u.level} • ${u.xp.toLocaleString()} XP`);
     }
 
     const container = new ContainerBuilder()

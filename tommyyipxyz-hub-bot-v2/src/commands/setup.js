@@ -20,7 +20,7 @@ const PERM_MAP = {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('Wipe and rebuild the entire TommyYipXYZ Hub server (Admin only)')
+    .setDescription('Wipe and rebuild the entire Dollar Vibe Club server (Admin only)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
@@ -29,7 +29,7 @@ module.exports = {
     const guild = interaction.guild;
     if (!guild) return interaction.editReply('This command only works in a server.');
 
-    let status = '```\n⚡ TommyYipXYZ Hub Setup\n────────────────────────\n```\n';
+    let status = '```\n⚡ Dollar Vibe Club Setup\n────────────────────────\n```\n';
     const updateStatus = async (msg) => {
       status += msg + '\n';
       await interaction.editReply(status).catch(() => {});
@@ -49,7 +49,7 @@ module.exports = {
 
       for (const [, channel] of nonCategories) {
         try {
-          await channel.delete('TommyYipXYZ Hub setup — rebuilding server');
+          await channel.delete('Dollar Vibe Club setup, rebuilding server');
           deleted++;
         } catch (e) {
           // Skip channels we can't delete
@@ -57,7 +57,7 @@ module.exports = {
       }
       for (const [, channel] of categories) {
         try {
-          await channel.delete('TommyYipXYZ Hub setup — rebuilding server');
+          await channel.delete('Dollar Vibe Club setup, rebuilding server');
           deleted++;
         } catch (e) {}
       }
@@ -72,7 +72,7 @@ module.exports = {
       let rolesDeleted = 0;
       for (const [, role] of oldRoles) {
         try {
-          await role.delete('TommyYipXYZ Hub setup — rebuilding');
+          await role.delete('Dollar Vibe Club setup, rebuilding');
           rolesDeleted++;
         } catch (e) {}
       }
@@ -90,7 +90,7 @@ module.exports = {
           permissions: perms,
           hoist: roleData.hoist,
           mentionable: roleData.mentionable,
-          reason: 'TommyYipXYZ Hub setup',
+          reason: 'Dollar Vibe Club setup',
         });
         createdRoles[roleData.name] = role;
       }
@@ -105,7 +105,7 @@ module.exports = {
         const cat = await guild.channels.create({
           name: category.name,
           type: ChannelType.GuildCategory,
-          reason: 'TommyYipXYZ Hub setup',
+          reason: 'Dollar Vibe Club setup',
         });
 
         for (const ch of category.channels) {
@@ -116,7 +116,7 @@ module.exports = {
             type: channelType,
             parent: cat.id,
             topic: ch.topic || null,
-            reason: 'TommyYipXYZ Hub setup',
+            reason: 'Dollar Vibe Club setup',
           };
 
           if (ch.readonly) {
@@ -156,7 +156,7 @@ module.exports = {
           .addSeparatorComponents(separator(true))
           .addTextDisplayComponents(text(serverConfig.rules.join('\n\n')))
           .addSeparatorComponents(separator())
-          .addTextDisplayComponents(text("-# TommyYipXYZ's Hub — Read, respect, build."));
+          .addTextDisplayComponents(text("-# Dollar Vibe Club ┃ Read, respect, build."));
 
         await rulesChannel.send({ components: [rulesContainer], flags: V2_FLAGS });
         await updateStatus('  ┃ Rules posted');
@@ -167,7 +167,7 @@ module.exports = {
       if (howChannel) {
         const howContainer = new ContainerBuilder()
           .setAccentColor(COLORS.brand)
-          .addTextDisplayComponents(text("# ⚡ Welcome to TommyYipXYZ's Hub"))
+          .addTextDisplayComponents(text("# ⚡ Welcome to Dollar Vibe Club"))
           .addTextDisplayComponents(
             text('A community of **builders, vibecoders, and hustlers** making money online.')
           )

@@ -1,5 +1,5 @@
 {
-  "serverName": "TommyYipXYZ's Hub",
+  "serverName": "Dollar Vibe Club",
   "roles": [
     { "name": "⚙ Admin", "color": "#e74c3c", "permissions": ["Administrator"], "hoist": true, "mentionable": false },
     { "name": "🛡 Mod", "color": "#e67e22", "permissions": ["ManageMessages", "KickMembers", "BanMembers", "MuteMembers", "ManageNicknames", "ManageThreads"], "hoist": true, "mentionable": true },
@@ -17,7 +17,7 @@
       "channels": [
         { "name": "┃rules", "type": "text", "topic": "↳ Read before you do anything else.", "readonly": true },
         { "name": "┃how-it-works", "type": "text", "topic": "↳ What this community is about and how to get started.", "readonly": true },
-        { "name": "┃pick-your-path", "type": "text", "topic": "↳ React to grab your roles — Vibecoder, Freelancer, Creator.", "readonly": true },
+        { "name": "┃pick-your-path", "type": "text", "topic": "↳ React to grab your roles: Vibecoder, Freelancer, Creator.", "readonly": true },
         { "name": "┃announcements", "type": "text", "topic": "↳ Updates, news, and important drops.", "readonly": true }
       ]
     },
@@ -26,7 +26,7 @@
       "channels": [
         { "name": "┃chat", "type": "text", "topic": "↳ Talk about whatever. Keep it chill." },
         { "name": "┃introductions", "type": "text", "topic": "↳ New here? Tell us who you are and what you're building." },
-        { "name": "┃daily-wins", "type": "text", "topic": "↳ Share your wins — big or small. First dollar? First deploy? Post it." },
+        { "name": "┃daily-wins", "type": "text", "topic": "↳ Share your wins, big or small. First dollar? First deploy? Post it." },
         { "name": "┃memes", "type": "text", "topic": "↳ Keep it funny. Keep it clean-ish." }
       ]
     },
@@ -45,14 +45,14 @@
         { "name": "┃money-talk", "type": "text", "topic": "↳ Strategies, income reports, what's working right now." },
         { "name": "┃freelance-game", "type": "text", "topic": "↳ Clients, pricing, proposals, and freelance life." },
         { "name": "┃saas-and-flips", "type": "text", "topic": "↳ Building and selling software, buying and flipping projects." },
-        { "name": "┃side-quests", "type": "text", "topic": "↳ Everything else — affiliate, content, dropshipping, experiments." }
+        { "name": "┃side-quests", "type": "text", "topic": "↳ Everything else: affiliate, content, dropshipping, experiments." }
       ]
     },
     {
       "name": "┃ LIVE 🔴",
       "channels": [
         { "name": "┃stream-chat", "type": "text", "topic": "↳ Live discussion during streams." },
-        { "name": "┃youtube-feed", "type": "text", "topic": "↳ Auto-posted new videos and streams from TommyYipXYZ.", "readonly": true },
+        { "name": "┃youtube-feed", "type": "text", "topic": "↳ Auto-posted new videos and streams from our founders.", "readonly": true },
         { "name": "┃upcoming", "type": "text", "topic": "↳ Stream schedule and upcoming events.", "readonly": true },
         { "name": "┃collabs", "type": "text", "topic": "↳ Looking for someone to team up with? Post here." }
       ]
@@ -81,8 +81,8 @@
     }
   ],
   "welcomeMessage": {
-    "title": "Welcome to TommyYipXYZ's Hub! 🚀",
-    "description": "You just joined a community of builders, vibecoders, and people making money online.\n\n**Here's how to get started:**\n\n┃ Read the rules\n┃ Pick your path — grab your roles\n┃ Introduce yourself\n┃ Start chatting\n\nLet's build something.",
+    "title": "Welcome to Dollar Vibe Club! 🚀",
+    "description": "You just joined a community of builders, vibecoders, and people making money online.\n\n**Here's how to get started:**\n\n┃ Read the rules\n┃ Pick your path, grab your roles\n┃ Introduce yourself\n┃ Start chatting\n\nLet's build something.",
     "color": "#9b59b6"
   },
   "rules": [
@@ -97,7 +97,7 @@
     "**9. Have fun and build.** This is a community of doers. Ship stuff, share wins, help others."
   ],
   "roleReactions": {
-    "message": "**Pick your path** — React to grab your roles:\n\n💜 → **Vibecoder** ┃ Build apps, sites, and tools\n💼 → **Freelancer** ┃ Sell your skills to clients\n🎥 → **Creator** ┃ Make content and grow an audience",
+    "message": "**Pick your path.** React to grab your roles:\n\n💜 → **Vibecoder** ┃ Build apps, sites, and tools\n💼 → **Freelancer** ┃ Sell your skills to clients\n🎥 → **Creator** ┃ Make content and grow an audience",
     "reactions": {
       "💜": "💜 Vibecoder",
       "💼": "💼 Freelancer",

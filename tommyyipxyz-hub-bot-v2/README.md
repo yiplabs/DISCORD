@@ -1,4 +1,4 @@
-# TommyYipXYZ's Hub Bot 🚀
+# Dollar Vibe Club Bot 🚀
 
 A custom Discord bot that sets up your entire server in one command and runs your community — welcome messages, XP/leveling, role reactions, and YouTube stream notifications.
 
@@ -23,7 +23,7 @@ A custom Discord bot that sets up your entire server in one command and runs you
 ### Step 1: Create a Discord Bot
 
 1. Go to [discord.com/developers/applications](https://discord.com/developers/applications)
-2. Click **"New Application"** → name it `TommyYipXYZ Bot`
+2. Click **"New Application"** → name it `Dollar Vibe Club Bot`
 3. Go to the **Bot** tab:
    - Click **"Reset Token"** → copy the token (you'll need this)
    - Enable **ALL 3 Privileged Intents**:
@@ -51,7 +51,7 @@ Replace `YOUR_CLIENT_ID` with your actual Client ID. The `permissions=8` gives A
 **Option B: Run locally**
 ```bash
 # Clone/download this project
-cd tommyyipxyz-hub-bot
+cd tommyyipxyz-hub-bot-v2
 
 # Install dependencies
 npm install

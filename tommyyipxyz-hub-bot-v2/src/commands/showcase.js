@@ -62,7 +62,7 @@ module.exports = {
     container
       .addSeparatorComponents(separator())
       .addTextDisplayComponents(
-        text(`-# Shipped by ${interaction.user.displayName} ┃ TommyYipXYZ's Hub`)
+        text(`-# Shipped by ${interaction.user.displayName} ┃ Dollar Vibe Club`)
       );
 
     const msg = await targetChannel.send({

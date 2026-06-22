@@ -3,7 +3,7 @@ const { COLORS, V2_FLAGS, ContainerBuilder, text, separator, gallery } = require
 const { ensureLiveRole, optInButtonRow } = require('./liveNotify');
 
 const YOUTUBE_RSS_URL = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
-const USER_AGENT = 'TommyYipXYZ-Hub-Bot/1.0';
+const USER_AGENT = 'DollarVibeClub-Bot/1.0';
 
 /**
  * Build the list of YouTube channels to watch.

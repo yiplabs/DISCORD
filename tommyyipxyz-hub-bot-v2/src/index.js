@@ -62,7 +62,7 @@ async function registerCommands() {
 // ─── EVENT: READY ───
 client.once('ready', async () => {
   console.log('');
-  console.log('┃ ⚡ TommyYipXYZ Hub Bot');
+  console.log('┃ ⚡ Dollar Vibe Club Bot');
   console.log(`┃ Logged in as ${client.user.tag}`);
   console.log(`┃ Serving ${client.guilds.cache.size} server(s)`);
   console.log('');
@@ -152,7 +152,7 @@ client.on('guildMemberAdd', async (member) => {
         [
           `## Welcome, ${member.displayName}! 👋`,
           '',
-          `Hey ${member}, welcome to **TommyYipXYZ's Hub**!`,
+          `Hey ${member}, welcome to **Dollar Vibe Club**!`,
         ].join('\n'),
         member.displayAvatarURL({ size: 256 })
       )
@@ -163,17 +163,17 @@ client.on('guildMemberAdd', async (member) => {
         [
           '```',
           '┃ Read the rules',
-          '┃ Pick your path — grab your roles',
+          '┃ Pick your path, grab your roles',
           '┃ Introduce yourself',
           '┃ Start building',
           '```',
           '',
-          `You're member **#${member.guild.memberCount}** — let's get it.`,
+          `You're member **#${member.guild.memberCount}**, let's get it.`,
         ].join('\n')
       )
     )
     .addSeparatorComponents(separator())
-    .addTextDisplayComponents(text("-# TommyYipXYZ's Hub ┃ Learn. Build. Earn."));
+    .addTextDisplayComponents(text("-# Dollar Vibe Club ┃ Learn. Build. Earn."));
 
   await channel.send({
     components: [container],
