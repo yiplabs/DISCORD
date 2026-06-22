@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
+const { COLORS, V2_FLAGS, ContainerBuilder, text, separator, gallery } = require('../utils/components');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -37,27 +38,38 @@ module.exports = {
 
     const targetChannel = showcaseChannel || interaction.channel;
 
-    const embed = new EmbedBuilder()
-      .setColor('#2ecc71')
-      .setTitle(`🚀 ${title}`)
-      .setURL(link.startsWith('http') ? link : `https://${link}`)
-      .setDescription(description)
-      .addFields(
-        { name: '🔗 Link', value: link, inline: true },
-        { name: '👤 Builder', value: `${interaction.user}`, inline: true }
-      )
-      .setFooter({ text: `Shipped by ${interaction.user.displayName} ┃ TommyYipXYZ's Hub` })
-      .setTimestamp();
+    const url = link.startsWith('http') ? link : `https://${link}`;
 
+    const detailLines = [
+      `🔗 **Link** • ${link}`,
+      `👤 **Builder** • ${interaction.user}`,
+    ];
     if (stack) {
-      embed.addFields({ name: '⚙️ Stack', value: stack, inline: true });
+      detailLines.push(`⚙️ **Stack** • ${stack}`);
     }
+
+    const container = new ContainerBuilder()
+      .setAccentColor(COLORS.success)
+      .addTextDisplayComponents(text(`## 🚀 [${title}](${url})`))
+      .addTextDisplayComponents(text(description))
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text(detailLines.join('\n')));
 
     if (screenshot) {
-      embed.setImage(screenshot.url);
+      container.addMediaGalleryComponents(gallery(screenshot.url));
     }
 
-    const msg = await targetChannel.send({ embeds: [embed] });
+    container
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(
+        text(`-# Shipped by ${interaction.user.displayName} ┃ TommyYipXYZ's Hub`)
+      );
+
+    const msg = await targetChannel.send({
+      components: [container],
+      flags: V2_FLAGS,
+      allowedMentions: { parse: [] },
+    });
 
     // Auto-react with fire and eyes
     await msg.react('🔥').catch(() => {});

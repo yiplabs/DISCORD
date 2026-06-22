@@ -7,7 +7,6 @@ const {
   Collection,
   REST,
   Routes,
-  EmbedBuilder,
 } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -16,6 +15,7 @@ const { stmts } = require('./utils/database');
 const { addMessageXP } = require('./utils/xp');
 const { checkAndNotify, getWatchedChannels } = require('./utils/youtube');
 const serverConfig = require('./data/server-config.json');
+const { COLORS, V2_FLAGS, ContainerBuilder, text, separator, thumbnailSection } = require('./utils/components');
 
 // ─── CLIENT SETUP ───
 const client = new Client({
@@ -132,27 +132,41 @@ client.on('guildMemberAdd', async (member) => {
     await member.roles.add(memberRole).catch(() => {});
   }
 
-  const embed = new EmbedBuilder()
-    .setColor('#9b59b6')
-    .setTitle(`Welcome, ${member.displayName}! 👋`)
-    .setDescription(
-      [
-        `Hey ${member}, welcome to **TommyYipXYZ's Hub**!`,
-        '',
-        '```',
-        '┃ Read the rules',
-        '┃ Pick your path — grab your roles',
-        '┃ Introduce yourself',
-        '┃ Start building',
-        '```',
-        '',
-        `You're member **#${member.guild.memberCount}** — let's get it.`,
-      ].join('\n')
+  const container = new ContainerBuilder()
+    .setAccentColor(COLORS.brand)
+    .addSectionComponents(
+      thumbnailSection(
+        [
+          `## Welcome, ${member.displayName}! 👋`,
+          '',
+          `Hey ${member}, welcome to **TommyYipXYZ's Hub**!`,
+        ].join('\n'),
+        member.displayAvatarURL({ size: 256 })
+      )
     )
-    .setThumbnail(member.displayAvatarURL({ size: 256 }))
-    .setFooter({ text: "TommyYipXYZ's Hub ┃ Learn. Build. Earn." });
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(
+      text(
+        [
+          '```',
+          '┃ Read the rules',
+          '┃ Pick your path — grab your roles',
+          '┃ Introduce yourself',
+          '┃ Start building',
+          '```',
+          '',
+          `You're member **#${member.guild.memberCount}** — let's get it.`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text("-# TommyYipXYZ's Hub ┃ Learn. Build. Earn."));
 
-  await channel.send({ embeds: [embed] });
+  await channel.send({
+    components: [container],
+    flags: V2_FLAGS,
+    allowedMentions: { parse: [] },
+  });
 });
 
 // ─── EVENT: REACTION ROLES ───
@@ -216,11 +230,13 @@ client.on('messageCreate', async (message) => {
     const channelId = settings?.xp_announce_channel_id || message.channelId;
     const channel = await message.guild.channels.fetch(channelId).catch(() => message.channel);
 
-    const embed = new EmbedBuilder()
-      .setColor('#2ecc71')
-      .setDescription(`⚡ **${message.author.displayName}** just reached **Level ${result.newLevel}**!`);
+    const container = new ContainerBuilder()
+      .setAccentColor(COLORS.success)
+      .addTextDisplayComponents(
+        text(`⚡ **${message.author.displayName}** just reached **Level ${result.newLevel}**!`)
+      );
 
-    await channel.send({ embeds: [embed] }).catch(() => {});
+    await channel.send({ components: [container], flags: V2_FLAGS }).catch(() => {});
   }
 });
 

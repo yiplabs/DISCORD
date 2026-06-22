@@ -2,10 +2,10 @@ const {
   SlashCommandBuilder,
   PermissionFlagsBits,
   ChannelType,
-  EmbedBuilder,
 } = require('discord.js');
 const serverConfig = require('../data/server-config.json');
 const { stmts } = require('../utils/database');
+const { COLORS, V2_FLAGS, ContainerBuilder, text, separator } = require('../utils/components');
 
 const PERM_MAP = {
   Administrator: PermissionFlagsBits.Administrator,
@@ -147,44 +147,60 @@ module.exports = {
       await updateStatus('\n📜 **Posting rules...**');
       const rulesChannel = createdChannels['rules'] || createdChannels['┃rules'];
       if (rulesChannel) {
-        const rulesEmbed = new EmbedBuilder()
-          .setColor('#9b59b6')
-          .setTitle('📜 Server Rules')
-          .setDescription(serverConfig.rules.join('\n\n'))
-          .setFooter({ text: "TommyYipXYZ's Hub — Read, respect, build." });
+        const rulesContainer = new ContainerBuilder()
+          .setAccentColor(COLORS.brand)
+          .addTextDisplayComponents(text('# 📜 Server Rules'))
+          .addTextDisplayComponents(
+            text('Read these before you post. Breaking them gets you muted, kicked, or banned.')
+          )
+          .addSeparatorComponents(separator(true))
+          .addTextDisplayComponents(text(serverConfig.rules.join('\n\n')))
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(text("-# TommyYipXYZ's Hub — Read, respect, build."));
 
-        await rulesChannel.send({ embeds: [rulesEmbed] });
+        await rulesChannel.send({ components: [rulesContainer], flags: V2_FLAGS });
         await updateStatus('  ┃ Rules posted');
       }
 
       // ─── 4. POST HOW IT WORKS ───
       const howChannel = createdChannels['how-it-works'] || createdChannels['┃how-it-works'];
       if (howChannel) {
-        const embed = new EmbedBuilder()
-          .setColor('#9b59b6')
-          .setTitle("⚡ Welcome to TommyYipXYZ's Hub")
-          .setDescription(
-            [
-              'A community of **builders, vibecoders, and hustlers** making money online.',
-              '',
-              '```',
-              '┃ THE LOBBY    → hang out, introduce yourself, share wins',
-              '┃ THE LAB      → build stuff, share projects, get help',
-              '┃ THE BAG      → money strategies, freelancing, SaaS',
-              '┃ LIVE         → stream chat, YouTube feed, collabs',
-              '┃ VOICE        → co-working, hangouts, screen sharing',
-              '```',
-              '',
-              '**Get started:**',
-              '> 1. Read the rules',
-              '> 2. Pick your path (grab your roles)',
-              '> 3. Introduce yourself',
-              '> 4. Start building 🔨',
-            ].join('\n')
+        const howContainer = new ContainerBuilder()
+          .setAccentColor(COLORS.brand)
+          .addTextDisplayComponents(text("# ⚡ Welcome to TommyYipXYZ's Hub"))
+          .addTextDisplayComponents(
+            text('A community of **builders, vibecoders, and hustlers** making money online.')
           )
-          .setFooter({ text: 'Learn. Build. Earn.' });
+          .addSeparatorComponents(separator(true))
+          .addTextDisplayComponents(
+            text(
+              [
+                '```',
+                '┃ THE LOBBY    → hang out, introduce yourself, share wins',
+                '┃ THE LAB      → build stuff, share projects, get help',
+                '┃ THE BAG      → money strategies, freelancing, SaaS',
+                '┃ LIVE         → stream chat, YouTube feed, collabs',
+                '┃ VOICE        → co-working, hangouts, screen sharing',
+                '```',
+              ].join('\n')
+            )
+          )
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(
+            text(
+              [
+                '**Get started:**',
+                '> 1. Read the rules',
+                '> 2. Pick your path (grab your roles)',
+                '> 3. Introduce yourself',
+                '> 4. Start building 🔨',
+              ].join('\n')
+            )
+          )
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(text('-# Learn. Build. Earn.'));
 
-        await howChannel.send({ embeds: [embed] });
+        await howChannel.send({ components: [howContainer], flags: V2_FLAGS });
         await updateStatus('  ┃ How-it-works posted');
       }
 
@@ -192,13 +208,15 @@ module.exports = {
       await updateStatus('\n🎯 **Setting up role reactions...**');
       const roleReactChannel = createdChannels['pick-your-path'] || createdChannels['┃pick-your-path'];
       if (roleReactChannel) {
-        const roleEmbed = new EmbedBuilder()
-          .setColor('#9b59b6')
-          .setTitle('🎯 Pick Your Path')
-          .setDescription(serverConfig.roleReactions.message)
-          .setFooter({ text: 'React below to grab your roles!' });
+        const roleContainer = new ContainerBuilder()
+          .setAccentColor(COLORS.brand)
+          .addTextDisplayComponents(text('# 🎯 Pick Your Path'))
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(text(serverConfig.roleReactions.message))
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(text('-# React below to grab your roles!'));
 
-        const roleMsg = await roleReactChannel.send({ embeds: [roleEmbed] });
+        const roleMsg = await roleReactChannel.send({ components: [roleContainer], flags: V2_FLAGS });
 
         for (const emoji of Object.keys(serverConfig.roleReactions.reactions)) {
           await roleMsg.react(emoji);

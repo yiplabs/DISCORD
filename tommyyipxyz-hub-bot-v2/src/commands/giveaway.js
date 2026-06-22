@@ -1,8 +1,5 @@
-const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionFlagsBits,
-} = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
+const { COLORS, V2_FLAGS, ContainerBuilder, text, separator } = require('../utils/components');
 
 // Store active giveaways in memory (persists until bot restart)
 const activeGiveaways = new Map();
@@ -78,24 +75,33 @@ async function startGiveaway(interaction) {
   );
   const targetChannel = giveawayChannel || interaction.channel;
 
-  const embed = new EmbedBuilder()
-    .setColor('#f1c40f')
-    .setTitle('🎉 GIVEAWAY 🎉')
-    .setDescription(
-      [
-        `**${prize}**`,
-        '',
-        `┃ React with 🎉 to enter!`,
-        `┃ **${winnerCount}** winner${winnerCount > 1 ? 's' : ''}`,
-        `┃ Ends <t:${endsAtUnix}:R>`,
-        '',
-        `Hosted by ${interaction.user}`,
-      ].join('\n')
-    )
-    .setFooter({ text: `${winnerCount} winner${winnerCount > 1 ? 's' : ''} ┃ Ends at` })
-    .setTimestamp(new Date(endsAt));
+  const winnerLabel = `${winnerCount} winner${winnerCount > 1 ? 's' : ''}`;
 
-  const msg = await targetChannel.send({ embeds: [embed] });
+  const container = new ContainerBuilder()
+    .setAccentColor(COLORS.gold)
+    .addTextDisplayComponents(text('# 🎉 GIVEAWAY 🎉'))
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(
+      text(
+        [
+          `## ${prize}`,
+          '',
+          '🎉 React with 🎉 to enter!',
+          `🏆 **${winnerLabel}**`,
+          `⏳ Ends <t:${endsAtUnix}:R>`,
+          '',
+          `Hosted by ${interaction.user}`,
+        ].join('\n')
+      )
+    )
+    .addSeparatorComponents(separator())
+    .addTextDisplayComponents(text(`-# ${winnerLabel} ┃ Ends <t:${endsAtUnix}:f>`));
+
+  const msg = await targetChannel.send({
+    components: [container],
+    flags: V2_FLAGS,
+    allowedMentions: { parse: [] },
+  });
   await msg.react('🎉');
 
   // Store giveaway data
@@ -147,22 +153,29 @@ async function resolveGiveaway(client, messageId) {
       winnerText = winners.map((w) => `${w}`).join(', ');
     }
 
-    const embed = new EmbedBuilder()
-      .setColor('#95a5a6')
-      .setTitle('🎉 GIVEAWAY ENDED 🎉')
-      .setDescription(
-        [
-          `**${data.prize}**`,
-          '',
-          `┃ **Winner${data.winnerCount > 1 ? 's' : ''}:** ${winnerText}`,
-          '',
-          `Hosted by <@${data.hostId}>`,
-        ].join('\n')
+    const container = new ContainerBuilder()
+      .setAccentColor(COLORS.muted)
+      .addTextDisplayComponents(text('# 🎉 GIVEAWAY ENDED 🎉'))
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(
+        text(
+          [
+            `## ${data.prize}`,
+            '',
+            `🏆 **Winner${data.winnerCount > 1 ? 's' : ''}:** ${winnerText}`,
+            '',
+            `Hosted by <@${data.hostId}>`,
+          ].join('\n')
+        )
       )
-      .setFooter({ text: 'Giveaway ended' })
-      .setTimestamp();
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text('-# Giveaway ended'));
 
-    await msg.edit({ embeds: [embed] });
+    await msg.edit({
+      components: [container],
+      flags: V2_FLAGS,
+      allowedMentions: { parse: [] },
+    });
 
     if (eligible.size > 0) {
       await channel.send(`🎉 Congratulations ${winnerText}! You won **${data.prize}**!`);

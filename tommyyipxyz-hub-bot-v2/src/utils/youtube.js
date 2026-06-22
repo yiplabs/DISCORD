@@ -1,5 +1,5 @@
 const { stmts } = require('./database');
-const { EmbedBuilder } = require('discord.js');
+const { COLORS, V2_FLAGS, ContainerBuilder, text, separator, gallery } = require('./components');
 
 const YOUTUBE_RSS_URL = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 const USER_AGENT = 'TommyYipXYZ-Hub-Bot/1.0';
@@ -158,31 +158,31 @@ async function checkChannel(channel, guildId, discordChannel, { channelId, handl
         state.last_video_id = latest.videoId;
         stmts.upsertYoutubeState.run(state);
 
-        const embed = new EmbedBuilder()
-          .setColor('#FF0000')
-          .setTitle(`📹 ${latest.title}`)
-          .setURL(latest.url)
-          .setAuthor({
-            name: channelName,
-            url: `https://www.youtube.com/@${handle}`,
-            iconURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(handle)}&background=FF0000&color=fff`,
-          })
-          .setDescription(
-            [
-              `**${channelName}** just uploaded a new video!`,
-              '',
-              `> **${latest.title}**`,
-              '',
-              `┃ [Watch now →](${latest.url})`,
-            ].join('\n')
+        const publishedUnix = Math.floor(new Date(latest.published).getTime() / 1000);
+
+        const container = new ContainerBuilder()
+          .setAccentColor(COLORS.youtube)
+          .addTextDisplayComponents(text('🚨 **NEW VIDEO JUST DROPPED** @everyone'))
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(
+            text(
+              [
+                `## 📹 [${latest.title}](${latest.url})`,
+                '',
+                `**${channelName}** just uploaded a new video!`,
+                '',
+                `[Watch now →](${latest.url})`,
+              ].join('\n')
+            )
           )
-          .setImage(latest.thumbnail)
-          .setTimestamp(new Date(latest.published))
-          .setFooter({ text: 'YouTube ┃ New Upload' });
+          .addMediaGalleryComponents(gallery(latest.thumbnail))
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(text(`-# YouTube ┃ New Upload • <t:${publishedUnix}:R>`));
 
         await discordChannel.send({
-          content: '🚨 **NEW VIDEO JUST DROPPED** @everyone',
-          embeds: [embed],
+          components: [container],
+          flags: V2_FLAGS,
+          allowedMentions: { parse: ['everyone'] },
         });
 
         console.log(`[YouTube] Notified ${handle} — new video: ${latest.title}`);
@@ -198,30 +198,31 @@ async function checkChannel(channel, guildId, discordChannel, { channelId, handl
       stmts.upsertYoutubeState.run(state);
 
       if (!isFirstRun) {
-        const embed = new EmbedBuilder()
-          .setColor('#FF0000')
-          .setTitle(`🔴 LIVE NOW: ${live.title}`)
-          .setURL(live.url)
-          .setAuthor({
-            name: `${handle} is LIVE`,
-            url: `https://www.youtube.com/@${handle}`,
-          })
-          .setDescription(
-            [
-              `**@${handle}** is streaming right now!`,
-              '',
-              `> **${live.title}**`,
-              '',
-              `┃ [Join the stream →](${live.url})`,
-            ].join('\n')
+        const container = new ContainerBuilder()
+          .setAccentColor(COLORS.youtube)
+          .addTextDisplayComponents(text(`🔴 **@${handle} IS LIVE** @everyone`))
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(
+            text(
+              [
+                `## 🔴 LIVE NOW: [${live.title}](${live.url})`,
+                '',
+                `**@${handle}** is streaming right now!`,
+                '',
+                `[Join the stream →](${live.url})`,
+              ].join('\n')
+            )
           )
-          .setImage(`https://i.ytimg.com/vi/${live.videoId}/maxresdefault_live.jpg`)
-          .setTimestamp()
-          .setFooter({ text: 'YouTube ┃ Live Stream' });
+          .addMediaGalleryComponents(
+            gallery(`https://i.ytimg.com/vi/${live.videoId}/maxresdefault_live.jpg`)
+          )
+          .addSeparatorComponents(separator())
+          .addTextDisplayComponents(text('-# YouTube ┃ Live Stream'));
 
         await discordChannel.send({
-          content: `🔴 **@${handle} IS LIVE** @everyone`,
-          embeds: [embed],
+          components: [container],
+          flags: V2_FLAGS,
+          allowedMentions: { parse: ['everyone'] },
         });
 
         console.log(`[YouTube] Notified ${handle} — LIVE: ${live.title}`);

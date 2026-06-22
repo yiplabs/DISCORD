@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { getLeaderboard } = require('../utils/xp');
+const { COLORS, V2_FLAGS, ContainerBuilder, text, separator } = require('../utils/components');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -27,12 +28,14 @@ module.exports = {
       lines.push(`${prefix} **${name}** — Level ${u.level} • ${u.xp.toLocaleString()} XP`);
     }
 
-    const embed = new EmbedBuilder()
-      .setColor('#f1c40f')
-      .setTitle('🏆 Leaderboard')
-      .setDescription(lines.join('\n'))
-      .setFooter({ text: 'Keep chatting and building to climb the ranks!' });
+    const container = new ContainerBuilder()
+      .setAccentColor(COLORS.gold)
+      .addTextDisplayComponents(text('# 🏆 Leaderboard'))
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text(lines.join('\n')))
+      .addSeparatorComponents(separator())
+      .addTextDisplayComponents(text('-# Keep chatting and building to climb the ranks!'));
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ components: [container], flags: V2_FLAGS });
   },
 };
