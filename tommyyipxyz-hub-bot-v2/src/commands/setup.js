@@ -5,7 +5,7 @@ const {
 } = require('discord.js');
 const serverConfig = require('../data/server-config.json');
 const { stmts } = require('../utils/database');
-const { COLORS, V2_FLAGS, ContainerBuilder, text, separator } = require('../utils/components');
+const { COLORS, text, separator, banneredContainer, v2Payload } = require('../utils/components');
 
 const PERM_MAP = {
   Administrator: PermissionFlagsBits.Administrator,
@@ -147,8 +147,8 @@ module.exports = {
       await updateStatus('\n📜 **Posting rules...**');
       const rulesChannel = createdChannels['rules'] || createdChannels['┃rules'];
       if (rulesChannel) {
-        const rulesContainer = new ContainerBuilder()
-          .setAccentColor(COLORS.brand)
+        const { container: rulesContainer, art } = banneredContainer(COLORS.brand, 'rules');
+        rulesContainer
           .addTextDisplayComponents(text('# 📜 Server Rules'))
           .addTextDisplayComponents(
             text('Read these before you post. Breaking them gets you muted, kicked, or banned.')
@@ -158,15 +158,15 @@ module.exports = {
           .addSeparatorComponents(separator())
           .addTextDisplayComponents(text("-# Dollar Vibe Club ┃ Read, respect, build."));
 
-        await rulesChannel.send({ components: [rulesContainer], flags: V2_FLAGS });
+        await rulesChannel.send(v2Payload(rulesContainer, art));
         await updateStatus('  ┃ Rules posted');
       }
 
       // ─── 4. POST HOW IT WORKS ───
       const howChannel = createdChannels['how-it-works'] || createdChannels['┃how-it-works'];
       if (howChannel) {
-        const howContainer = new ContainerBuilder()
-          .setAccentColor(COLORS.brand)
+        const { container: howContainer, art } = banneredContainer(COLORS.brand, 'how-it-works');
+        howContainer
           .addTextDisplayComponents(text("# ⚡ Welcome to Dollar Vibe Club"))
           .addTextDisplayComponents(
             text('A community of **builders, vibecoders, and hustlers** making money online.')
@@ -200,7 +200,7 @@ module.exports = {
           .addSeparatorComponents(separator())
           .addTextDisplayComponents(text('-# Learn. Build. Earn.'));
 
-        await howChannel.send({ components: [howContainer], flags: V2_FLAGS });
+        await howChannel.send(v2Payload(howContainer, art));
         await updateStatus('  ┃ How-it-works posted');
       }
 
@@ -208,15 +208,15 @@ module.exports = {
       await updateStatus('\n🎯 **Setting up role reactions...**');
       const roleReactChannel = createdChannels['pick-your-path'] || createdChannels['┃pick-your-path'];
       if (roleReactChannel) {
-        const roleContainer = new ContainerBuilder()
-          .setAccentColor(COLORS.brand)
+        const { container: roleContainer, art } = banneredContainer(COLORS.brand, 'pick-your-path');
+        roleContainer
           .addTextDisplayComponents(text('# 🎯 Pick Your Path'))
           .addSeparatorComponents(separator())
           .addTextDisplayComponents(text(serverConfig.roleReactions.message))
           .addSeparatorComponents(separator())
           .addTextDisplayComponents(text('-# React below to grab your roles!'));
 
-        const roleMsg = await roleReactChannel.send({ components: [roleContainer], flags: V2_FLAGS });
+        const roleMsg = await roleReactChannel.send(v2Payload(roleContainer, art));
 
         for (const emoji of Object.keys(serverConfig.roleReactions.reactions)) {
           await roleMsg.react(emoji);

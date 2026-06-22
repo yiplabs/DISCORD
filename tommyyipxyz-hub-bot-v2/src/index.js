@@ -15,7 +15,16 @@ const { stmts } = require('./utils/database');
 const { addMessageXP } = require('./utils/xp');
 const { checkAndNotify, getWatchedChannels } = require('./utils/youtube');
 const serverConfig = require('./data/server-config.json');
-const { COLORS, V2_FLAGS, ContainerBuilder, text, separator, thumbnailSection } = require('./utils/components');
+const {
+  COLORS,
+  V2_FLAGS,
+  ContainerBuilder,
+  text,
+  separator,
+  thumbnailSection,
+  banneredContainer,
+  v2Payload,
+} = require('./utils/components');
 const { TOGGLE_ID, handleToggle } = require('./utils/liveNotify');
 
 // ─── CLIENT SETUP ───
@@ -145,8 +154,8 @@ client.on('guildMemberAdd', async (member) => {
     await member.roles.add(memberRole).catch(() => {});
   }
 
-  const container = new ContainerBuilder()
-    .setAccentColor(COLORS.brand)
+  const { container, art } = banneredContainer(COLORS.brand, 'welcome');
+  container
     .addSectionComponents(
       thumbnailSection(
         [
@@ -175,11 +184,7 @@ client.on('guildMemberAdd', async (member) => {
     .addSeparatorComponents(separator())
     .addTextDisplayComponents(text("-# Dollar Vibe Club ┃ Learn. Build. Earn."));
 
-  await channel.send({
-    components: [container],
-    flags: V2_FLAGS,
-    allowedMentions: { parse: [] },
-  });
+  await channel.send(v2Payload(container, art, { allowedMentions: { parse: [] } }));
 });
 
 // ─── EVENT: REACTION ROLES ───

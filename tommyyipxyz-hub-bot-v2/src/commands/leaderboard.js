@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { getLeaderboard } = require('../utils/xp');
-const { COLORS, V2_FLAGS, ContainerBuilder, text, separator } = require('../utils/components');
+const { COLORS, text, separator, banneredContainer, v2Payload } = require('../utils/components');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -28,14 +28,14 @@ module.exports = {
       lines.push(`${prefix} **${name}** • Level ${u.level} • ${u.xp.toLocaleString()} XP`);
     }
 
-    const container = new ContainerBuilder()
-      .setAccentColor(COLORS.gold)
+    const { container, art } = banneredContainer(COLORS.gold, 'leaderboard');
+    container
       .addTextDisplayComponents(text('# 🏆 Leaderboard'))
       .addSeparatorComponents(separator())
       .addTextDisplayComponents(text(lines.join('\n')))
       .addSeparatorComponents(separator())
       .addTextDisplayComponents(text('-# Keep chatting and building to climb the ranks!'));
 
-    await interaction.reply({ components: [container], flags: V2_FLAGS });
+    await interaction.reply(v2Payload(container, art));
   },
 };

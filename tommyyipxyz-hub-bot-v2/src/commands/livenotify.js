@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
-const { COLORS, V2_FLAGS, ContainerBuilder, text, separator } = require('../utils/components');
+const { COLORS, text, separator, banneredContainer, v2Payload } = require('../utils/components');
 const { ensureLiveRole, optInButtonRow } = require('../utils/liveNotify');
 
 module.exports = {
@@ -32,8 +32,8 @@ module.exports = {
 
     const channel = interaction.options.getChannel('channel') || interaction.channel;
 
-    const container = new ContainerBuilder()
-      .setAccentColor(COLORS.youtube)
+    const { container, art } = banneredContainer(COLORS.youtube, 'live');
+    container
       .addTextDisplayComponents(text('# 🔔 Live and Video Notifications'))
       .addSeparatorComponents(separator())
       .addTextDisplayComponents(
@@ -48,9 +48,7 @@ module.exports = {
       )
       .addActionRowComponents(optInButtonRow());
 
-    const sent = await channel
-      .send({ components: [container], flags: V2_FLAGS })
-      .catch(() => null);
+    const sent = await channel.send(v2Payload(container, art)).catch(() => null);
 
     if (!sent) {
       return interaction.editReply(

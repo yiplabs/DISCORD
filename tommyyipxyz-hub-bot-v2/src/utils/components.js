@@ -3,6 +3,8 @@
 // old embeds across the bot. Every message built with these must be sent with
 // `flags: V2_FLAGS` and may NOT include `content` or `embeds`.
 
+const fs = require('fs');
+const path = require('path');
 const {
   ContainerBuilder,
   TextDisplayBuilder,
@@ -12,12 +14,17 @@ const {
   ThumbnailBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
+  AttachmentBuilder,
   MessageFlags,
 } = require('discord.js');
 
+// Banner images live in the repo and are uploaded with the message as attachments,
+// so there is no external image host to break. Drop a PNG here to switch a banner on.
+const BANNER_DIR = path.join(__dirname, '..', 'assets', 'banners');
+
 // Components V2 accent colors are integers, not the hex strings embeds used.
 const COLORS = {
-  brand: 0x9b59b6, // purple — default hub identity
+  brand: 0x9b59b6, // purple — default brand identity
   success: 0x2ecc71, // green — level ups, showcases
   gold: 0xf1c40f, // yellow — giveaways, leaderboard
   youtube: 0xff0000, // red — YouTube uploads / live
@@ -53,6 +60,45 @@ function gallery(...urls) {
   );
 }
 
+/**
+ * Look up the banner image for `name` (e.g. 'rules' -> assets/banners/rules.png).
+ * Returns { gallery, file } to place a full-width banner at the top of a container,
+ * or null when the image is not present, so every message works with or without art.
+ */
+function banner(name) {
+  const fileName = `${name}.png`;
+  const filePath = path.join(BANNER_DIR, fileName);
+  if (!fs.existsSync(filePath)) return null;
+  return {
+    gallery: new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder().setURL(`attachment://${fileName}`)
+    ),
+    file: new AttachmentBuilder(filePath, { name: fileName }),
+  };
+}
+
+/**
+ * Start a container with an optional top banner already in place.
+ * Returns { container, art } where art is the banner() result (or null). Add the rest
+ * of the content to `container`, then send with v2Payload(container, art).
+ */
+function banneredContainer(accentColor, name) {
+  const art = banner(name);
+  const container = new ContainerBuilder().setAccentColor(accentColor);
+  if (art) container.addMediaGalleryComponents(art.gallery);
+  return { container, art };
+}
+
+/** Build the send/reply payload for a Components V2 container, attaching its banner. */
+function v2Payload(container, art, extra = {}) {
+  return {
+    components: [container],
+    flags: V2_FLAGS,
+    ...(art ? { files: [art.file] } : {}),
+    ...extra,
+  };
+}
+
 module.exports = {
   COLORS,
   V2_FLAGS,
@@ -61,4 +107,7 @@ module.exports = {
   separator,
   thumbnailSection,
   gallery,
+  banner,
+  banneredContainer,
+  v2Payload,
 };
