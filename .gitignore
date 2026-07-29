@@ -3,3 +3,6 @@ node_modules/
 src/data/*.db
 src/data/*.db-wal
 src/data/*.db-shm
+tommyyipxyz-hub-bot-v2/src/data/*.db
+tommyyipxyz-hub-bot-v2/src/data/*.db-wal
+tommyyipxyz-hub-bot-v2/src/data/*.db-shm

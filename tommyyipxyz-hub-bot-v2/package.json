@@ -1,19 +1,19 @@
 {
-  "name": "tommyyipxyz-hub-bot",
-  "version": "1.0.0",
-  "description": "Discord bot for TommyYipXYZ's Hub — server setup, welcome, XP, YouTube notifications",
+  "name": "dollar-vibe-club-discord-bot",
+  "version": "1.1.0",
+  "description": "Dollar Vibe Club community bot",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "setup": "node src/index.js"
+    "test": "node --test ../test/*.test.js"
   },
   "dependencies": {
-    "discord.js": "^14.16.3",
-    "dotenv": "^16.4.7",
-    "better-sqlite3": "^11.7.0",
-    "node-cron": "^3.0.3"
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "better-sqlite3": "^13.0.2",
+    "node-cron": "^4.6.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22 <25"
   }
 }
