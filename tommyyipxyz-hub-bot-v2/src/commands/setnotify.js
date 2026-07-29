@@ -8,8 +8,8 @@ const { stmts } = require('../utils/database');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setnotify')
-    .setDescription('Choose which channel gets YouTube notifications (Admin only)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDescription('Choose the fallback channel for YouTube notifications')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addChannelOption((option) =>
       option
         .setName('channel')
@@ -25,6 +25,14 @@ module.exports = {
     if (!guild) {
       return interaction.reply({
         content: 'This command only works in a server.',
+        ephemeral: true,
+      });
+    }
+
+    if (process.env.DISCORD_NOTIFY_CHANNEL_ID?.trim()) {
+      return interaction.reply({
+        content:
+          'The production announcement channel is pinned in Railway. Update `DISCORD_NOTIFY_CHANNEL_ID` there so the choice survives deployments.',
         ephemeral: true,
       });
     }
@@ -56,6 +64,8 @@ module.exports = {
       ephemeral: true,
     });
 
-    console.log(`[SetNotify] YouTube notifications set to #${channel.name} (${channel.id}) in ${guild.name}`);
+    console.log(
+      `[SetNotify] YouTube notifications set to #${channel.name} (${channel.id}) in ${guild.name}`
+    );
   },
 };

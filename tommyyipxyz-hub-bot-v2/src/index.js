@@ -3,7 +3,6 @@ require('dotenv').config();
 const {
   Client,
   GatewayIntentBits,
-  Partials,
   Collection,
   REST,
   Routes,
@@ -12,22 +11,29 @@ const {
 const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
-const { stmts } = require('./utils/database');
-const { addMessageXP } = require('./utils/xp');
 const { checkAndNotify, getWatchedChannels } = require('./utils/youtube');
-const serverConfig = require('./data/server-config.json');
+const {
+  isConfiguredGuild,
+  validateRuntimeEnvironment,
+} = require('./utils/config');
+const {
+  createDvcApi,
+  createDvcXpService,
+  isDvcApiConfigured,
+} = require('./utils/dvc-api');
+validateRuntimeEnvironment();
 
 // ─── CLIENT SETUP ───
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
+
+const dvcApi = isDvcApiConfigured() ? createDvcApi() : null;
+const dvcXpService = dvcApi ? createDvcXpService({ api: dvcApi }) : null;
+client.dvcApi = dvcApi;
 
 // ─── LOAD COMMANDS ───
 client.commands = new Collection();
@@ -47,6 +53,7 @@ async function registerCommands() {
   try {
     console.log('[Bot] Registering slash commands...');
     for (const guild of client.guilds.cache.values()) {
+      if (!isConfiguredGuild(guild.id)) continue;
       await rest.put(
         Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id),
         { body: commands }
@@ -58,12 +65,31 @@ async function registerCommands() {
   }
 }
 
+async function checkYoutubeForConfiguredGuilds() {
+  for (const guild of client.guilds.cache.values()) {
+    if (!isConfiguredGuild(guild.id)) continue;
+
+    try {
+      await checkAndNotify(client, guild.id);
+    } catch (error) {
+      console.error(
+        `[YouTube] Check failed for guild ${guild.id}: ${error.message}`
+      );
+    }
+  }
+}
+
 // ─── EVENT: READY ───
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   console.log('');
-  console.log('┃ ⚡ TommyYipXYZ Hub Bot');
+  console.log('┃ ⚡ Dollar Vibe Club Bot');
   console.log(`┃ Logged in as ${client.user.tag}`);
   console.log(`┃ Serving ${client.guilds.cache.size} server(s)`);
+  console.log(
+    dvcApi
+      ? '┃ DVC account + XP bridge connected'
+      : '┃ DVC account + XP bridge not configured (XP disabled)'
+  );
   console.log('');
 
   await registerCommands();
@@ -72,17 +98,13 @@ client.once('ready', async () => {
   const watchedChannels = getWatchedChannels();
   if (watchedChannels.length > 0) {
     // Run once on startup
-    setTimeout(async () => {
-      for (const guild of client.guilds.cache.values()) {
-        await checkAndNotify(client, guild.id);
-      }
+    setTimeout(() => {
+      void checkYoutubeForConfiguredGuilds();
     }, 10_000); // 10s after boot
 
     // Then every 3 minutes
-    cron.schedule('*/3 * * * *', async () => {
-      for (const guild of client.guilds.cache.values()) {
-        await checkAndNotify(client, guild.id);
-      }
+    cron.schedule('*/3 * * * *', () => {
+      void checkYoutubeForConfiguredGuilds();
     });
     console.log('┃ YouTube checker started (every 3 min)');
     for (const c of watchedChannels) {
@@ -98,6 +120,12 @@ client.once('ready', async () => {
 // ─── EVENT: SLASH COMMANDS ───
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
+  if (!isConfiguredGuild(interaction.guildId)) {
+    return interaction.reply({
+      content: 'This bot is configured only for Dollar Vibe Club.',
+      ephemeral: true,
+    });
+  }
 
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
@@ -118,109 +146,37 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// ─── EVENT: NEW MEMBER (WELCOME) ───
-client.on('guildMemberAdd', async (member) => {
-  const settings = stmts.getSettings.get(member.guild.id);
-  if (!settings?.welcome_channel_id) return;
-
-  const channel = await member.guild.channels.fetch(settings.welcome_channel_id).catch(() => null);
-  if (!channel) return;
-
-  // Auto-assign Member role
-  const memberRole = member.guild.roles.cache.find((r) => r.name === '── Member ──');
-  if (memberRole) {
-    await member.roles.add(memberRole).catch(() => {});
-  }
-
-  const embed = new EmbedBuilder()
-    .setColor('#9b59b6')
-    .setTitle(`Welcome, ${member.displayName}! 👋`)
-    .setDescription(
-      [
-        `Hey ${member}, welcome to **TommyYipXYZ's Hub**!`,
-        '',
-        '```',
-        '┃ Read the rules',
-        '┃ Pick your path — grab your roles',
-        '┃ Introduce yourself',
-        '┃ Start building',
-        '```',
-        '',
-        `You're member **#${member.guild.memberCount}** — let's get it.`,
-      ].join('\n')
-    )
-    .setThumbnail(member.displayAvatarURL({ size: 256 }))
-    .setFooter({ text: "TommyYipXYZ's Hub ┃ Learn. Build. Earn." });
-
-  await channel.send({ embeds: [embed] });
-});
-
-// ─── EVENT: REACTION ROLES ───
-client.on('messageReactionAdd', async (reaction, user) => {
-  if (user.bot) return;
-
-  if (reaction.partial) await reaction.fetch().catch(() => {});
-  if (reaction.message.partial) await reaction.message.fetch().catch(() => {});
-
-  const settings = stmts.getSettings.get(reaction.message.guildId);
-  if (!settings?.role_react_message_id) return;
-  if (reaction.message.id !== settings.role_react_message_id) return;
-
-  const emoji = reaction.emoji.name;
-  const roleName = serverConfig.roleReactions.reactions[emoji];
-  if (!roleName) return;
-
-  const guild = reaction.message.guild;
-  const role = guild.roles.cache.find((r) => r.name === roleName);
-  if (!role) return;
-
-  const member = await guild.members.fetch(user.id).catch(() => null);
-  if (member) {
-    await member.roles.add(role).catch(() => {});
-  }
-});
-
-client.on('messageReactionRemove', async (reaction, user) => {
-  if (user.bot) return;
-
-  if (reaction.partial) await reaction.fetch().catch(() => {});
-  if (reaction.message.partial) await reaction.message.fetch().catch(() => {});
-
-  const settings = stmts.getSettings.get(reaction.message.guildId);
-  if (!settings?.role_react_message_id) return;
-  if (reaction.message.id !== settings.role_react_message_id) return;
-
-  const emoji = reaction.emoji.name;
-  const roleName = serverConfig.roleReactions.reactions[emoji];
-  if (!roleName) return;
-
-  const guild = reaction.message.guild;
-  const role = guild.roles.cache.find((r) => r.name === roleName);
-  if (!role) return;
-
-  const member = await guild.members.fetch(user.id).catch(() => null);
-  if (member) {
-    await member.roles.remove(role).catch(() => {});
-  }
-});
-
 // ─── EVENT: XP ON MESSAGE ───
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (!message.guild) return;
+  if (!isConfiguredGuild(message.guild.id)) return;
 
-  const result = addMessageXP(message.author.id, message.guild.id);
+  if (dvcXpService) {
+    try {
+      const result = await dvcXpService.awardMessage({
+        discordId: message.author.id,
+        guildId: message.guild.id,
+        channelId: message.channelId,
+        messageId: message.id,
+      });
 
-  if (result?.leveledUp) {
-    const settings = stmts.getSettings.get(message.guild.id);
-    const channelId = settings?.xp_announce_channel_id || message.channelId;
-    const channel = await message.guild.channels.fetch(channelId).catch(() => message.channel);
-
-    const embed = new EmbedBuilder()
-      .setColor('#2ecc71')
-      .setDescription(`⚡ **${message.author.displayName}** just reached **Level ${result.newLevel}**!`);
-
-    await channel.send({ embeds: [embed] }).catch(() => {});
+      if (result.leveled_up) {
+        const embed = new EmbedBuilder()
+          .setColor('#2ecc71')
+          .setTitle('⚡ DVC Rank Up')
+          .setDescription(
+            `**${message.author.displayName}** reached **${result.level_name} · Level ${result.new_level}**!`
+          )
+          .setFooter({
+            text: 'Progress is shared with your Dollar Vibe Club account',
+          });
+        await message.channel.send({ embeds: [embed] }).catch(() => {});
+      }
+    } catch (error) {
+      console.error(`[DVC XP] Award failed: ${error.message}`);
+    }
+    return;
   }
 });
 

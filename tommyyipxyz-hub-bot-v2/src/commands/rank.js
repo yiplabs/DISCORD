@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getUserStats } = require('../utils/xp');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -11,33 +10,67 @@ module.exports = {
 
   async execute(interaction) {
     const target = interaction.options.getUser('user') || interaction.user;
-    const stats = getUserStats(target.id, interaction.guildId);
 
-    if (!stats) {
-      return interaction.reply({
-        content: target.id === interaction.user.id
-          ? "You haven't earned any XP yet. Start chatting!"
-          : "That user hasn't earned any XP yet.",
-        ephemeral: true,
-      });
+    if (interaction.client.dvcApi) {
+      await interaction.deferReply({ ephemeral: true });
+
+      let state;
+      try {
+        state = await interaction.client.dvcApi.getUser(target.id);
+      } catch (error) {
+        console.error(`[DVC XP] Could not read rank: ${error.message}`);
+        return interaction.editReply({
+          content:
+            'DVC rank data is temporarily unavailable. Please try again shortly.',
+        });
+      }
+
+      if (!state.linked) {
+        if (target.id !== interaction.user.id) {
+          return interaction.editReply({
+            content: 'This member does not have a public DVC rank yet.',
+          });
+        }
+
+        const baseUrl = (
+          process.env.DVC_WEB_URL || 'https://dollarvibeclub.com'
+        ).replace(/\/+$/, '');
+        return interaction.editReply({
+          content:
+            `You have **${state.pending_xp.toLocaleString()} XP** waiting. ` +
+            `Connect Discord to your Dollar Vibe Club account to claim it:\n` +
+            `${baseUrl}/link/discord`,
+        });
+      }
+
+      const embed = new EmbedBuilder()
+        .setColor('#9b59b6')
+        .setAuthor({
+          name: target.displayName,
+          iconURL: target.displayAvatarURL(),
+        })
+        .setTitle(`${state.level_name} · Level ${state.level}`)
+        .setDescription(
+          `Shared progress for **@${state.username}** across Dollar Vibe Club and Discord.`
+        )
+        .addFields(
+          { name: 'DVC Rank', value: `#${state.rank}`, inline: true },
+          {
+            name: 'Total XP',
+            value: state.xp.toLocaleString(),
+            inline: true,
+          },
+          { name: 'Level', value: String(state.level), inline: true }
+        )
+        .setFooter({ text: 'Dollar Vibe Club · One account, shared progress' });
+
+      return interaction.editReply({ embeds: [embed] });
     }
 
-    // Build a progress bar
-    const filled = Math.round(stats.progress / 5);
-    const bar = '▰'.repeat(filled) + '▱'.repeat(20 - filled);
-
-    const embed = new EmbedBuilder()
-      .setColor('#9b59b6')
-      .setAuthor({ name: target.displayName, iconURL: target.displayAvatarURL() })
-      .setTitle(`Level ${stats.level}`)
-      .addFields(
-        { name: 'Rank', value: `#${stats.rank}`, inline: true },
-        { name: 'XP', value: `${stats.xp.toLocaleString()} / ${stats.nextLevelXp.toLocaleString()}`, inline: true },
-        { name: 'Messages', value: stats.messages.toLocaleString(), inline: true },
-        { name: 'Progress', value: `${bar} ${stats.progress}%`, inline: false }
-      )
-      .setFooter({ text: `${stats.xpToNext.toLocaleString()} XP to next level` });
-
-    await interaction.reply({ embeds: [embed] });
+    return interaction.reply({
+      content:
+        'The shared DVC XP bridge is not configured yet. Local Railway XP is disabled to keep one authoritative rank.',
+      ephemeral: true,
+    });
   },
 };

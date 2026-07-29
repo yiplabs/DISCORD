@@ -46,7 +46,7 @@ module.exports = {
         { name: '🔗 Link', value: link, inline: true },
         { name: '👤 Builder', value: `${interaction.user}`, inline: true }
       )
-      .setFooter({ text: `Shipped by ${interaction.user.displayName} ┃ TommyYipXYZ's Hub` })
+      .setFooter({ text: `Shipped by ${interaction.user.displayName} ┃ Dollar Vibe Club` })
       .setTimestamp();
 
     if (stack) {
