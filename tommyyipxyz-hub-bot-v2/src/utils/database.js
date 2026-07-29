@@ -1,7 +1,13 @@
 const Database = require('better-sqlite3');
+const fs = require('fs');
 const path = require('path');
 
+function ensureDatabaseDirectory(databasePath) {
+  fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+}
+
 const dbPath = path.join(__dirname, '..', 'data', 'hub.db');
+ensureDatabaseDirectory(dbPath);
 const db = new Database(dbPath);
 
 // Enable WAL mode for better performance
@@ -80,4 +86,4 @@ const stmts = {
   `),
 };
 
-module.exports = { db, stmts };
+module.exports = { db, ensureDatabaseDirectory, stmts };
