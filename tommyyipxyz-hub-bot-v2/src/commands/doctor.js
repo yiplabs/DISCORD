@@ -12,6 +12,7 @@ const CHANNEL_PERMISSIONS = [
   ['Send messages', PermissionFlagsBits.SendMessages],
   ['Embed links', PermissionFlagsBits.EmbedLinks],
   ['Read message history', PermissionFlagsBits.ReadMessageHistory],
+  ['Mention everyone', PermissionFlagsBits.MentionEveryone],
 ];
 
 module.exports = {
