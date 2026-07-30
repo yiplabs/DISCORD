@@ -444,19 +444,22 @@ async function checkChannel(
   }
 
   // ─── Check for live streams ───
-  if (live && state.last_live_id !== live.videoId) {
+  if (live) {
     const priorAnnouncement = notifiedThisCheck.has(live.videoId)
       ? { kind: 'upload' }
       : await findVideoAnnouncement(discordChannel, live.videoId);
+    const needsLiveAnnouncement =
+      state.last_live_id !== live.videoId ||
+      priorAnnouncement?.kind === 'upload';
     const alreadyPosted =
       priorAnnouncement && priorAnnouncement.kind !== 'upload';
 
-    if (!alreadyPosted) {
+    if (needsLiveAnnouncement && !alreadyPosted) {
       await discordChannel.send(liveMessage(live, handle, channelId));
       state.last_live_id = live.videoId;
       stateStore.upsert(state);
       console.log(`[YouTube] Notified ${handle} — LIVE: ${live.title}`);
-    } else {
+    } else if (needsLiveAnnouncement) {
       state.last_live_id = live.videoId;
       stateStore.upsert(state);
       console.log(
