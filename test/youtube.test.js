@@ -215,19 +215,26 @@ test('upgrades a previously posted upload to one live everyone alert', async () 
     last_live_id: 'older-live',
   });
   const sent = [];
+  const recentMessages = [
+    {
+      content: '🚨 **NEW VIDEO JUST DROPPED**',
+      embeds: [
+        {
+          url: FRESH_LIVE.url,
+          footer: { text: 'Dollar Vibe Club ┃ New YouTube Upload' },
+        },
+      ],
+    },
+  ];
   const discordChannel = createDiscordChannel({
-    recentMessages: [
-      {
-        content: '🚨 **NEW VIDEO JUST DROPPED**',
-        embeds: [
-          {
-            url: FRESH_LIVE.url,
-            footer: { text: 'Dollar Vibe Club ┃ New YouTube Upload' },
-          },
-        ],
-      },
-    ],
-    send: async (message) => sent.push(message),
+    recentMessages,
+    send: async (message) => {
+      sent.push(message);
+      recentMessages.unshift({
+        content: message.content,
+        embeds: message.embeds.map((embed) => embed.data || embed),
+      });
+    },
   });
   const dependencies = {
     stateStore,
@@ -254,6 +261,59 @@ test('upgrades a previously posted upload to one live everyone alert', async () 
   assert.match(sent[0].content, /IS LIVE.*@everyone/);
   assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
   assert.equal(stateStore.snapshot().last_live_id, FRESH_LIVE.videoId);
+
+  await withCleanYoutubeEnv(() =>
+    checkChannel(null, 'dvc-guild', discordChannel, HUNTER, dependencies)
+  );
+  assert.equal(sent.length, 1);
+});
+
+test('repairs a live stream that legacy state marked handled after an upload post', async () => {
+  const stateStore = createStateStore({
+    guild_id: 'dvc-guild',
+    yt_channel_id: HUNTER.channelId,
+    last_video_id: FRESH_LIVE.videoId,
+    last_live_id: FRESH_LIVE.videoId,
+  });
+  const sent = [];
+  const recentMessages = [
+    {
+      content: '🚨 **NEW VIDEO JUST DROPPED**',
+      embeds: [
+        {
+          url: FRESH_LIVE.url,
+          footer: { text: 'Dollar Vibe Club ┃ New YouTube Upload' },
+        },
+      ],
+    },
+  ];
+  const discordChannel = createDiscordChannel({
+    recentMessages,
+    send: async (message) => {
+      sent.push(message);
+      recentMessages.unshift({
+        content: message.content,
+        embeds: message.embeds.map((embed) => embed.data || embed),
+      });
+    },
+  });
+  const dependencies = {
+    stateStore,
+    fetchFeed: async () => ({
+      entries: [],
+      channelName: 'HUNTER YIPLABS',
+      channelId: HUNTER.channelId,
+    }),
+    fetchLive: async () => FRESH_LIVE,
+  };
+
+  await withCleanYoutubeEnv(() =>
+    checkChannel(null, 'dvc-guild', discordChannel, HUNTER, dependencies)
+  );
+
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].content, /IS LIVE.*@everyone/);
+  assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
 
   await withCleanYoutubeEnv(() =>
     checkChannel(null, 'dvc-guild', discordChannel, HUNTER, dependencies)
