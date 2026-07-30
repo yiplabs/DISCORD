@@ -251,7 +251,10 @@ async function wasVideoAlreadyPosted(discordChannel, videoId) {
   return false;
 }
 
-function notificationMention(env = process.env) {
+function notificationMention(
+  { channelId = '', isLive = false } = {},
+  env = process.env
+) {
   const roleId = env.YOUTUBE_MENTION_ROLE_ID?.trim();
   if (/^\d{5,25}$/.test(roleId || '')) {
     return {
@@ -259,6 +262,20 @@ function notificationMention(env = process.env) {
       allowedMentions: { parse: [], roles: [roleId] },
     };
   }
+
+  const liveEveryoneChannelIds = new Set(
+    (env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => /^UC[A-Za-z0-9_-]{22}$/.test(value))
+  );
+  if (isLive && liveEveryoneChannelIds.has(channelId)) {
+    return {
+      suffix: ' @everyone',
+      allowedMentions: { parse: ['everyone'] },
+    };
+  }
+
   if (env.YOUTUBE_PING_EVERYONE?.trim().toLowerCase() === 'true') {
     return {
       suffix: ' @everyone',
@@ -299,8 +316,8 @@ function uploadMessage(latest, channelName, handle) {
   };
 }
 
-function liveMessage(live, handle) {
-  const mention = notificationMention();
+function liveMessage(live, handle, channelId) {
+  const mention = notificationMention({ channelId, isLive: true });
   const embed = new EmbedBuilder()
     .setColor('#FF0000')
     .setTitle(`🔴 LIVE NOW: ${live.title}`)
@@ -405,7 +422,7 @@ async function checkChannel(
       (await wasVideoAlreadyPosted(discordChannel, live.videoId));
 
     if (!alreadyPosted) {
-      await discordChannel.send(liveMessage(live, handle));
+      await discordChannel.send(liveMessage(live, handle, channelId));
       state.last_live_id = live.videoId;
       stateStore.upsert(state);
       console.log(`[YouTube] Notified ${handle} — LIVE: ${live.title}`);
