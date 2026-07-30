@@ -159,6 +159,110 @@ test('detects YouTube current videoDetails isLive marker', async () => {
   });
 });
 
+test('detects live videoDetails when YouTube reorders and expands the object', async () => {
+  const title = 'Day 52: Production page variant';
+  const html = [
+    'page-prefix',
+    '"videoDetails":',
+    JSON.stringify({
+      title,
+      shortDescription: 'x'.repeat(6_000),
+      videoId: 'knJJJmNjOB4',
+      isLive: true,
+      channelId: HUNTER.channelId,
+    }),
+    ',"trackingParams":"ignored"',
+  ].join('');
+
+  const live = await checkIfLive(HUNTER.channelId, {
+    fetchImpl: async () => ({
+      ok: true,
+      text: async () => html,
+    }),
+  });
+
+  assert.deepEqual(live, {
+    videoId: 'knJJJmNjOB4',
+    title,
+    url: 'https://www.youtube.com/watch?v=knJJJmNjOB4',
+    isLive: true,
+  });
+});
+
+test('ignores foreign and invalid live candidates before the watched channel', async () => {
+  const html = [
+    '"videoDetails":',
+    JSON.stringify({
+      videoId: 'foreign0001',
+      title: 'Another channel is live',
+      isLive: true,
+      channelId: 'UC0000000000000000000000',
+    }),
+    ',"videoDetails":',
+    JSON.stringify({
+      videoId: 'not-valid',
+      title: 'Invalid video identifier',
+      isLive: true,
+      channelId: HUNTER.channelId,
+    }),
+    ',"videoDetails":',
+    JSON.stringify({
+      videoId: 'knJJJmNjOB4',
+      title: 'Hunter is live',
+      isLive: true,
+      channelId: HUNTER.channelId,
+    }),
+  ].join('');
+
+  const live = await checkIfLive(HUNTER.channelId, {
+    fetchImpl: async () => ({
+      ok: true,
+      text: async () => html,
+    }),
+  });
+
+  assert.equal(live.videoId, 'knJJJmNjOB4');
+  assert.equal(live.title, 'Hunter is live');
+});
+
+test('does not treat another channel videoDetails as the watched live stream', async () => {
+  const live = await checkIfLive(HUNTER.channelId, {
+    fetchImpl: async () => ({
+      ok: true,
+      text: async () =>
+        `"videoDetails":${JSON.stringify({
+          videoId: 'foreign0001',
+          title: 'Another channel is live',
+          isLive: true,
+          channelId: 'UC0000000000000000000000',
+        })}`,
+    }),
+  });
+
+  assert.equal(live, null);
+});
+
+test('does not promote an offline watched video through a page-global legacy flag', async () => {
+  const live = await checkIfLive(HUNTER.channelId, {
+    fetchImpl: async () => ({
+      ok: true,
+      text: async () =>
+        [
+          '"videoDetails":',
+          JSON.stringify({
+            videoId: 'knJJJmNjOB4',
+            title: 'Hunter replay',
+            isLive: false,
+            channelId: HUNTER.channelId,
+          }),
+          ',"unrelated":{"isLiveNow":true}',
+        ].join(''),
+    }),
+  });
+
+  assert.equal(live, null);
+});
+
 test('routes a current YouTube live RSS entry only through the live everyone message', async () => {
   const liveVideo = {
     videoId: 'knJJJmNjOB4',
