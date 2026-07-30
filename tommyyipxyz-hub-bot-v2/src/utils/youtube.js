@@ -41,6 +41,16 @@ function decodeXmlEntities(value) {
   );
 }
 
+function decodeJsonString(value) {
+  if (!value) return value;
+
+  try {
+    return JSON.parse(`"${value}"`);
+  } catch {
+    return value.replace(/\\u0026/g, '&');
+  }
+}
+
 /**
  * Build the list of YouTube channels to watch.
  *
@@ -189,19 +199,28 @@ async function checkIfLive(channelId, dependencies = {}) {
 
     const html = await res.text();
 
-    // If redirected to a video page with "isLiveBroadcast" it's live
-    const isLive = html.includes('"isLiveBroadcast":true') || html.includes('"isLiveNow":true');
+    // YouTube's current live page exposes the active stream in videoDetails.
+    // Keep the older flags as fallbacks for page variants still in rotation.
+    const currentLiveDetails = html.match(
+      /"videoDetails":\{"videoId":"([^"]+)","title":"((?:\\.|[^"\\])*)"[\s\S]{0,5000}?"isLive":true/
+    );
+    const isLive =
+      Boolean(currentLiveDetails) ||
+      html.includes('"isLiveBroadcast":true') ||
+      html.includes('"isLiveNow":true');
     if (!isLive) return null;
 
     // Extract video ID from live page
-    const videoIdMatch = html.match(/"videoId":"([^"]+)"/);
-    const titleMatch = html.match(/"title":"([^"]+)"/);
+    const videoIdMatch =
+      currentLiveDetails || html.match(/"videoId":"([^"]+)"/);
+    const titleMatch =
+      currentLiveDetails || html.match(/"title":"((?:\\.|[^"\\])*)"/);
 
     if (!videoIdMatch) return null;
 
     return {
       videoId: videoIdMatch[1],
-      title: titleMatch ? titleMatch[1].replace(/\\u0026/g, '&') : 'LIVE NOW',
+      title: titleMatch ? decodeJsonString(titleMatch[2] || titleMatch[1]) : 'LIVE NOW',
       url: `https://www.youtube.com/watch?v=${videoIdMatch[1]}`,
       isLive: true,
     };
@@ -231,15 +250,32 @@ function isFreshUpload(published, now) {
   return age >= 0 && age <= FIRST_RUN_FRESHNESS_MS;
 }
 
-async function wasVideoAlreadyPosted(discordChannel, videoId) {
-  if (!discordChannel.messages?.fetch || !videoId) return false;
+function announcementKind(message) {
+  const footerText = (message.embeds || [])
+    .map((embed) => embed.footer?.text || embed.data?.footer?.text || '')
+    .join(' ');
+  const content = message.content || '';
+
+  if (/Live Stream/i.test(footerText) || /\bIS LIVE\b/i.test(content)) {
+    return 'live';
+  }
+  if (/New YouTube Upload/i.test(footerText) || /\bNEW VIDEO\b/i.test(content)) {
+    return 'upload';
+  }
+  return 'unknown';
+}
+
+async function findVideoAnnouncement(discordChannel, videoId) {
+  if (!discordChannel.messages?.fetch || !videoId) return null;
 
   try {
     const recentMessages = await discordChannel.messages.fetch({ limit: 50 });
     for (const message of recentMessages.values()) {
-      if (message.content?.includes(videoId)) return true;
+      if (message.content?.includes(videoId)) {
+        return { kind: announcementKind(message) };
+      }
       if (message.embeds?.some((embed) => embed.url?.includes(videoId))) {
-        return true;
+        return { kind: announcementKind(message) };
       }
     }
   } catch (err) {
@@ -248,13 +284,24 @@ async function wasVideoAlreadyPosted(discordChannel, videoId) {
     );
   }
 
-  return false;
+  return null;
+}
+
+async function wasVideoAlreadyPosted(discordChannel, videoId) {
+  return Boolean(await findVideoAnnouncement(discordChannel, videoId));
 }
 
 function notificationMention(
-  { channelId = '', isLive = false } = {},
+  { isLive = false } = {},
   env = process.env
 ) {
+  if (isLive) {
+    return {
+      suffix: ' @everyone',
+      allowedMentions: { parse: ['everyone'] },
+    };
+  }
+
   const roleId = env.YOUTUBE_MENTION_ROLE_ID?.trim();
   if (/^\d{5,25}$/.test(roleId || '')) {
     return {
@@ -263,25 +310,6 @@ function notificationMention(
     };
   }
 
-  const liveEveryoneChannelIds = new Set(
-    (env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS || '')
-      .split(',')
-      .map((value) => value.trim())
-      .filter((value) => /^UC[A-Za-z0-9_-]{22}$/.test(value))
-  );
-  if (isLive && liveEveryoneChannelIds.has(channelId)) {
-    return {
-      suffix: ' @everyone',
-      allowedMentions: { parse: ['everyone'] },
-    };
-  }
-
-  if (env.YOUTUBE_PING_EVERYONE?.trim().toLowerCase() === 'true') {
-    return {
-      suffix: ' @everyone',
-      allowedMentions: { parse: ['everyone'] },
-    };
-  }
   return { suffix: '', allowedMentions: { parse: [] } };
 }
 
@@ -417,9 +445,11 @@ async function checkChannel(
 
   // ─── Check for live streams ───
   if (live && state.last_live_id !== live.videoId) {
+    const priorAnnouncement = notifiedThisCheck.has(live.videoId)
+      ? { kind: 'upload' }
+      : await findVideoAnnouncement(discordChannel, live.videoId);
     const alreadyPosted =
-      notifiedThisCheck.has(live.videoId) ||
-      (await wasVideoAlreadyPosted(discordChannel, live.videoId));
+      priorAnnouncement && priorAnnouncement.kind !== 'upload';
 
     if (!alreadyPosted) {
       await discordChannel.send(liveMessage(live, handle, channelId));

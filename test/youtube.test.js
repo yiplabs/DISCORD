@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   checkAndNotify,
   checkChannel,
+  checkIfLive,
   checkNewVideo,
   fetchWithTimeout,
   getWatchedChannels,
@@ -131,6 +132,174 @@ test('aborts a YouTube request that exceeds its deadline', async () => {
     ),
     /timed out/
   );
+});
+
+test('detects YouTube current videoDetails isLive marker', async () => {
+  const live = await checkIfLive(HUNTER.channelId, {
+    fetchImpl: async () => ({
+      ok: true,
+      text: async () =>
+        [
+          '{"videoDetails":{',
+          '"videoId":"knJJJmNjOB4",',
+          '"title":"Day 52: Can 3 AI Agents Launch a Startup Live?",',
+          '"lengthSeconds":"0",',
+          '"isLive":true,',
+          `"channelId":"${HUNTER.channelId}"`,
+          '}}',
+        ].join(''),
+    }),
+  });
+
+  assert.deepEqual(live, {
+    videoId: 'knJJJmNjOB4',
+    title: 'Day 52: Can 3 AI Agents Launch a Startup Live?',
+    url: 'https://www.youtube.com/watch?v=knJJJmNjOB4',
+    isLive: true,
+  });
+});
+
+test('routes a current YouTube live RSS entry only through the live everyone message', async () => {
+  const liveVideo = {
+    videoId: 'knJJJmNjOB4',
+    title: 'Day 52: Can 3 AI Agents Launch a Startup Live?',
+    published: '2026-07-30T15:09:23.000Z',
+    updated: '2026-07-30T15:09:26.000Z',
+    url: 'https://www.youtube.com/watch?v=knJJJmNjOB4',
+    thumbnail: 'https://i.ytimg.com/vi/knJJJmNjOB4/hqdefault.jpg',
+  };
+  const stateStore = createStateStore({
+    guild_id: 'dvc-guild',
+    yt_channel_id: HUNTER.channelId,
+    last_video_id: 'older-video',
+    last_live_id: 'older-live',
+  });
+  const sent = [];
+  const discordChannel = createDiscordChannel({
+    send: async (message) => sent.push(message),
+  });
+
+  await withCleanYoutubeEnv(() =>
+    checkChannel(null, 'dvc-guild', discordChannel, HUNTER, {
+      stateStore,
+      fetchFeed: async () => ({
+        entries: [liveVideo],
+        channelName: 'HUNTER YIPLABS',
+        channelId: HUNTER.channelId,
+      }),
+      fetchLive: () =>
+        checkIfLive(HUNTER.channelId, {
+          fetchImpl: async () => ({
+            ok: true,
+            text: async () =>
+              `{"videoDetails":{"videoId":"${liveVideo.videoId}","title":"${liveVideo.title}","isLive":true,"channelId":"${HUNTER.channelId}"}}`,
+          }),
+        }),
+      now: () => Date.parse('2026-07-30T15:10:00.000Z'),
+    })
+  );
+
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].content, /IS LIVE.*@everyone/);
+  assert.doesNotMatch(sent[0].content, /NEW VIDEO/);
+  assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
+  assert.equal(stateStore.snapshot().last_video_id, liveVideo.videoId);
+  assert.equal(stateStore.snapshot().last_live_id, liveVideo.videoId);
+});
+
+test('upgrades a previously posted upload to one live everyone alert', async () => {
+  const stateStore = createStateStore({
+    guild_id: 'dvc-guild',
+    yt_channel_id: HUNTER.channelId,
+    last_video_id: FRESH_LIVE.videoId,
+    last_live_id: 'older-live',
+  });
+  const sent = [];
+  const discordChannel = createDiscordChannel({
+    recentMessages: [
+      {
+        content: '🚨 **NEW VIDEO JUST DROPPED**',
+        embeds: [
+          {
+            url: FRESH_LIVE.url,
+            footer: { text: 'Dollar Vibe Club ┃ New YouTube Upload' },
+          },
+        ],
+      },
+    ],
+    send: async (message) => sent.push(message),
+  });
+  const dependencies = {
+    stateStore,
+    fetchFeed: async () => ({
+      entries: [
+        {
+          ...FRESH_VIDEO,
+          videoId: FRESH_LIVE.videoId,
+          title: FRESH_LIVE.title,
+          url: FRESH_LIVE.url,
+        },
+      ],
+      channelName: 'HUNTER YIPLABS',
+      channelId: HUNTER.channelId,
+    }),
+    fetchLive: async () => FRESH_LIVE,
+  };
+
+  await withCleanYoutubeEnv(() =>
+    checkChannel(null, 'dvc-guild', discordChannel, HUNTER, dependencies)
+  );
+
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].content, /IS LIVE.*@everyone/);
+  assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
+  assert.equal(stateStore.snapshot().last_live_id, FRESH_LIVE.videoId);
+
+  await withCleanYoutubeEnv(() =>
+    checkChannel(null, 'dvc-guild', discordChannel, HUNTER, dependencies)
+  );
+  assert.equal(sent.length, 1);
+});
+
+test('keeps prior live and unknown announcements deduplicated', async () => {
+  for (const priorMessage of [
+    {
+      content: '🔴 **@HUNTERYIPLABS IS LIVE** @everyone',
+      embeds: [
+        {
+          url: FRESH_LIVE.url,
+          footer: { text: 'Dollar Vibe Club ┃ Live Stream' },
+        },
+      ],
+    },
+    {
+      content: 'Already announced this stream',
+      embeds: [{ url: FRESH_LIVE.url }],
+    },
+  ]) {
+    const stateStore = createStateStore({
+      guild_id: 'dvc-guild',
+      yt_channel_id: HUNTER.channelId,
+      last_video_id: FRESH_LIVE.videoId,
+      last_live_id: 'older-live',
+    });
+    const sent = [];
+    const discordChannel = createDiscordChannel({
+      recentMessages: [priorMessage],
+      send: async (message) => sent.push(message),
+    });
+
+    await withCleanYoutubeEnv(() =>
+      checkChannel(null, 'dvc-guild', discordChannel, HUNTER, {
+        stateStore,
+        fetchFeed: async () => ({ entries: [] }),
+        fetchLive: async () => FRESH_LIVE,
+      })
+    );
+
+    assert.equal(sent.length, 0);
+    assert.equal(stateStore.snapshot().last_live_id, FRESH_LIVE.videoId);
+  }
 });
 
 function createStateStore(initialState = null) {
@@ -277,35 +446,43 @@ test('does not mass-mention the server for uploads by default', () =>
     assert.deepEqual(sent[0].allowedMentions, { parse: [] });
   }));
 
-test('mass-mentions the server for Tommy live events when his channel is allowlisted', () =>
+test('mass-mentions the server for every watched live event without configuration', () =>
   withCleanYoutubeEnv(async () => {
-    process.env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS = TOMMY.channelId;
+    for (const watchedChannel of [TOMMY, HUNTER]) {
+      const stateStore = createStateStore({
+        guild_id: 'dvc-guild',
+        yt_channel_id: watchedChannel.channelId,
+        last_video_id: FRESH_VIDEO.videoId,
+        last_live_id: 'older-live',
+      });
+      const sent = [];
+      const discordChannel = createDiscordChannel({
+        send: async (message) => sent.push(message),
+      });
 
-    const stateStore = createStateStore({
-      guild_id: 'dvc-guild',
-      yt_channel_id: TOMMY.channelId,
-      last_video_id: FRESH_VIDEO.videoId,
-      last_live_id: 'older-live',
-    });
-    const sent = [];
-    const discordChannel = createDiscordChannel({
-      send: async (message) => sent.push(message),
-    });
+      await checkChannel(
+        null,
+        'dvc-guild',
+        discordChannel,
+        watchedChannel,
+        {
+          stateStore,
+          fetchFeed: async () => ({ entries: [] }),
+          fetchLive: async () => FRESH_LIVE,
+        }
+      );
 
-    await checkChannel(null, 'dvc-guild', discordChannel, TOMMY, {
-      stateStore,
-      fetchFeed: async () => ({ entries: [] }),
-      fetchLive: async () => FRESH_LIVE,
-    });
-
-    assert.equal(sent.length, 1);
-    assert.equal(sent[0].content.includes('@everyone'), true);
-    assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
+      assert.equal(sent.length, 1);
+      assert.match(sent[0].content, /IS LIVE/);
+      assert.equal(sent[0].content.includes('@everyone'), true);
+      assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
+      assert.match(sent[0].embeds[0].data.footer.text, /Live Stream/);
+    }
   }));
 
-test('does not mass-mention Hunter when only Tommy is allowlisted', () =>
+test('live everyone ping takes precedence over a configured notification role', () =>
   withCleanYoutubeEnv(async () => {
-    process.env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS = TOMMY.channelId;
+    process.env.YOUTUBE_MENTION_ROLE_ID = '123456789012345678';
 
     const stateStore = createStateStore({
       guild_id: 'dvc-guild',
@@ -325,13 +502,14 @@ test('does not mass-mention Hunter when only Tommy is allowlisted', () =>
     });
 
     assert.equal(sent.length, 1);
-    assert.equal(sent[0].content.includes('@everyone'), false);
-    assert.deepEqual(sent[0].allowedMentions, { parse: [] });
+    assert.equal(sent[0].content.includes('@everyone'), true);
+    assert.equal(sent[0].content.includes('<@&123456789012345678>'), false);
+    assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
   }));
 
-test('does not mass-mention Tommy uploads when only live events are allowlisted', () =>
+test('never mass-mentions regular uploads through the legacy broad switch', () =>
   withCleanYoutubeEnv(async () => {
-    process.env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS = TOMMY.channelId;
+    process.env.YOUTUBE_PING_EVERYONE = 'true';
 
     const stateStore = createStateStore({
       guild_id: 'dvc-guild',
@@ -356,8 +534,10 @@ test('does not mass-mention Tommy uploads when only live events are allowlisted'
     });
 
     assert.equal(sent.length, 1);
+    assert.match(sent[0].content, /NEW VIDEO JUST DROPPED/);
     assert.equal(sent[0].content.includes('@everyone'), false);
     assert.deepEqual(sent[0].allowedMentions, { parse: [] });
+    assert.match(sent[0].embeds[0].data.footer.text, /New YouTube Upload/);
   }));
 
 test('uses Discord channel history to suppress a duplicate after state loss', async () => {
