@@ -18,6 +18,7 @@ const YOUTUBE_ENV_KEYS = [
   'DISCORD_NOTIFY_CHANNEL_ID',
   'YOUTUBE_MENTION_ROLE_ID',
   'YOUTUBE_PING_EVERYONE',
+  'YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS',
 ];
 
 function withCleanYoutubeEnv(run) {
@@ -173,6 +174,17 @@ const TOMMY = {
   handle: 'TOMMYYIPXYZ',
 };
 
+const HUNTER = {
+  channelId: 'UC_oMk6B6Hv7PwoyskeWWS2g',
+  handle: 'HUNTERYIPLABS',
+};
+
+const FRESH_LIVE = {
+  videoId: 'fresh-live',
+  title: 'Live DVC build',
+  url: 'https://www.youtube.com/watch?v=fresh-live',
+};
+
 const FRESH_VIDEO = {
   videoId: 'fresh-video',
   title: 'Fresh DVC build',
@@ -261,6 +273,89 @@ test('does not mass-mention the server for uploads by default', () =>
       now: () => Date.parse('2026-07-29T21:00:00.000Z'),
     });
 
+    assert.equal(sent[0].content.includes('@everyone'), false);
+    assert.deepEqual(sent[0].allowedMentions, { parse: [] });
+  }));
+
+test('mass-mentions the server for Tommy live events when his channel is allowlisted', () =>
+  withCleanYoutubeEnv(async () => {
+    process.env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS = TOMMY.channelId;
+
+    const stateStore = createStateStore({
+      guild_id: 'dvc-guild',
+      yt_channel_id: TOMMY.channelId,
+      last_video_id: FRESH_VIDEO.videoId,
+      last_live_id: 'older-live',
+    });
+    const sent = [];
+    const discordChannel = createDiscordChannel({
+      send: async (message) => sent.push(message),
+    });
+
+    await checkChannel(null, 'dvc-guild', discordChannel, TOMMY, {
+      stateStore,
+      fetchFeed: async () => ({ entries: [] }),
+      fetchLive: async () => FRESH_LIVE,
+    });
+
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].content.includes('@everyone'), true);
+    assert.deepEqual(sent[0].allowedMentions, { parse: ['everyone'] });
+  }));
+
+test('does not mass-mention Hunter when only Tommy is allowlisted', () =>
+  withCleanYoutubeEnv(async () => {
+    process.env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS = TOMMY.channelId;
+
+    const stateStore = createStateStore({
+      guild_id: 'dvc-guild',
+      yt_channel_id: HUNTER.channelId,
+      last_video_id: FRESH_VIDEO.videoId,
+      last_live_id: 'older-live',
+    });
+    const sent = [];
+    const discordChannel = createDiscordChannel({
+      send: async (message) => sent.push(message),
+    });
+
+    await checkChannel(null, 'dvc-guild', discordChannel, HUNTER, {
+      stateStore,
+      fetchFeed: async () => ({ entries: [] }),
+      fetchLive: async () => FRESH_LIVE,
+    });
+
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].content.includes('@everyone'), false);
+    assert.deepEqual(sent[0].allowedMentions, { parse: [] });
+  }));
+
+test('does not mass-mention Tommy uploads when only live events are allowlisted', () =>
+  withCleanYoutubeEnv(async () => {
+    process.env.YOUTUBE_LIVE_PING_EVERYONE_CHANNEL_IDS = TOMMY.channelId;
+
+    const stateStore = createStateStore({
+      guild_id: 'dvc-guild',
+      yt_channel_id: TOMMY.channelId,
+      last_video_id: 'older-video',
+      last_live_id: null,
+    });
+    const sent = [];
+    const discordChannel = createDiscordChannel({
+      send: async (message) => sent.push(message),
+    });
+
+    await checkChannel(null, 'dvc-guild', discordChannel, TOMMY, {
+      stateStore,
+      fetchFeed: async () => ({
+        entries: [FRESH_VIDEO],
+        channelName: 'TOMMY YIPXYZ',
+        channelId: TOMMY.channelId,
+      }),
+      fetchLive: async () => null,
+      now: () => Date.parse('2026-07-29T21:00:00.000Z'),
+    });
+
+    assert.equal(sent.length, 1);
     assert.equal(sent[0].content.includes('@everyone'), false);
     assert.deepEqual(sent[0].allowedMentions, { parse: [] });
   }));
