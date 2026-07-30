@@ -41,14 +41,76 @@ function decodeXmlEntities(value) {
   );
 }
 
-function decodeJsonString(value) {
-  if (!value) return value;
-
-  try {
-    return JSON.parse(`"${value}"`);
-  } catch {
-    return value.replace(/\\u0026/g, '&');
+function parseJsonObjectAt(source, objectStart) {
+  if (source[objectStart] !== '{') {
+    return { value: null, end: objectStart + 1 };
   }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = objectStart; index < source.length; index += 1) {
+    const character = source[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === '\\') {
+        escaped = true;
+      } else if (character === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+    } else if (character === '{') {
+      depth += 1;
+    } else if (character === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return {
+            value: JSON.parse(source.slice(objectStart, index + 1)),
+            end: index + 1,
+          };
+        } catch {
+          return { value: null, end: index + 1 };
+        }
+      }
+    }
+  }
+
+  return { value: null, end: source.length };
+}
+
+function findLiveVideoDetails(html, expectedChannelId) {
+  const marker = '"videoDetails":';
+  let searchFrom = 0;
+
+  while (searchFrom < html.length) {
+    const markerIndex = html.indexOf(marker, searchFrom);
+    if (markerIndex === -1) break;
+
+    let objectStart = markerIndex + marker.length;
+    while (/\s/.test(html[objectStart] || '')) objectStart += 1;
+
+    const parsed = parseJsonObjectAt(html, objectStart);
+    if (
+      parsed.value?.channelId === expectedChannelId &&
+      typeof parsed.value.videoId === 'string' &&
+      /^[A-Za-z0-9_-]{11}$/.test(parsed.value.videoId) &&
+      parsed.value.isLive === true
+    ) {
+      return parsed.value;
+    }
+
+    searchFrom = parsed.end;
+  }
+
+  return null;
 }
 
 /**
@@ -199,29 +261,19 @@ async function checkIfLive(channelId, dependencies = {}) {
 
     const html = await res.text();
 
-    // YouTube's current live page exposes the active stream in videoDetails.
-    // Keep the older flags as fallbacks for page variants still in rotation.
-    const currentLiveDetails = html.match(
-      /"videoDetails":\{"videoId":"([^"]+)","title":"((?:\\.|[^"\\])*)"[\s\S]{0,5000}?"isLive":true/
-    );
-    const isLive =
-      Boolean(currentLiveDetails) ||
-      html.includes('"isLiveBroadcast":true') ||
-      html.includes('"isLiveNow":true');
-    if (!isLive) return null;
-
-    // Extract video ID from live page
-    const videoIdMatch =
-      currentLiveDetails || html.match(/"videoId":"([^"]+)"/);
-    const titleMatch =
-      currentLiveDetails || html.match(/"title":"((?:\\.|[^"\\])*)"/);
-
-    if (!videoIdMatch) return null;
+    // Bind live status, channel, and video ID to the same player object. Global
+    // legacy flags are intentionally ignored because they can describe a
+    // different player and would make an @everyone false positive possible.
+    const liveDetails = findLiveVideoDetails(html, channelId);
+    if (!liveDetails) return null;
 
     return {
-      videoId: videoIdMatch[1],
-      title: titleMatch ? decodeJsonString(titleMatch[2] || titleMatch[1]) : 'LIVE NOW',
-      url: `https://www.youtube.com/watch?v=${videoIdMatch[1]}`,
+      videoId: liveDetails.videoId,
+      title:
+        typeof liveDetails.title === 'string'
+          ? liveDetails.title
+          : 'LIVE NOW',
+      url: `https://www.youtube.com/watch?v=${liveDetails.videoId}`,
       isLive: true,
     };
   } catch (err) {
